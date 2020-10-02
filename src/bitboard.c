@@ -43,8 +43,6 @@ INLINE Bitboard LandingSquareBB(const Square sq, const int step) {
 // Initializes non-slider attack lookups
 CONSTR InitNonSliderAttacks() {
 
-    Bitboard unused = fileHBB | rank8BB;
-
     int SingleSteps[8]  = {  -9, -8, -7, -1,  1,  7,  8,  9 };
     int DoubleSteps[16] = { -18,-17,-16,-15,-14,-10, -6, -2, 2, 6, 10, 14, 15, 16, 17, 18 };
 

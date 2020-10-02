@@ -85,6 +85,11 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
         if (!colorBB(sideToMove))
             return -MATE + pos->ply;
 
+        if (pos->pieceBB == full)
+            return PopCount(colorBB( sideToMove)) >
+                   PopCount(colorBB(!sideToMove)) ?  MATE_IN_MAX - pos->ply
+                                                  : -MATE_IN_MAX + pos->ply;
+
         // Position is drawn
         if (IsRepetition(pos) || pos->rule50 >= 100)
             return 0;

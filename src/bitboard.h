@@ -40,6 +40,9 @@ enum {
     rank6BB = 0xFF0000000000,
     rank7BB = 0xFF000000000000,
     rank8BB = 0xFF00000000000000,
+
+    unused  = fileHBB | rank8BB,
+    full    = 0xFFFFFFFFFFFFFF & ~unused,
 };
 
 extern const Bitboard FileBB[8];
