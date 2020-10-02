@@ -34,90 +34,11 @@
 #define PERFT_FEN "x5o/7/7/7/7/7/o5x x 0 1"
 
 
-/* Benchmark heavily inspired by Ethereal*/
-
-static const char *BenchmarkFENs[] = {
-    #include "bench.csv"
-};
-
-typedef struct BenchResult {
-
-    TimePoint elapsed;
-    uint64_t nodes;
-    int score;
-    Move best;
-
-} BenchResult;
-
-void Benchmark(int argc, char **argv) {
-
-    // Default depth 15, 1 thread, and 32MB hash
-    Limits.timelimit = false;
-    Limits.depth     = argc > 2 ? atoi(argv[2]) : 15;
-    int threadCount  = argc > 3 ? atoi(argv[3]) : 1;
-    TT.requestedMB   = argc > 4 ? atoi(argv[4]) : DEFAULTHASH;
-
-    Position pos;
-    Thread *threads = InitThreads(threadCount);
-    InitTT(threads);
-
-    int FENCount = sizeof(BenchmarkFENs) / sizeof(char *);
-    BenchResult results[FENCount];
-    TimePoint totalElapsed = 1; // Avoid possible div/0
-    uint64_t totalNodes = 0;
-
-    for (int i = 0; i < FENCount; ++i) {
-
-        printf("[# %2d] %s\n", i + 1, BenchmarkFENs[i]);
-
-        // Search
-        ParseFen(BenchmarkFENs[i], &pos);
-        ABORT_SIGNAL = false;
-        Limits.start = Now();
-        SearchPosition(&pos, threads);
-
-        // Collect results
-        BenchResult *r = &results[i];
-        r->elapsed = TimeSince(Limits.start);
-        r->nodes   = TotalNodes(threads);
-        r->score   = threads->score;
-        r->best    = threads->bestMove;
-
-        totalElapsed += r->elapsed;
-        totalNodes   += r->nodes;
-
-        ClearTT(threads);
-    }
-
-    puts("======================================================");
-
-    for (int i = 0; i < FENCount; ++i) {
-        BenchResult *r = &results[i];
-        printf("[# %2d] %5d cp  %5s %10" PRIu64 " nodes %10d nps\n",
-               i+1, r->score, MoveToStr(r->best), r->nodes,
-               (int)(1000.0 * r->nodes / (r->elapsed + 1)));
-    }
-
-    puts("======================================================");
-
-    printf("OVERALL: %7" PRIi64 " ms %13" PRIu64 " nodes %10d nps\n",
-           totalElapsed, totalNodes, (int)(1000.0 * totalNodes / totalElapsed));
-}
-
 #ifdef DEV
 
 /* Perft */
 
 static uint64_t leafNodes;
-
-// Generate all pseudo legal moves
-void GenAllMoves(const Position *pos, MoveList *list) {
-
-    list->count = list->next = 0;
-
-    GenNoisyMoves(pos, list);
-    GenQuietMoves(pos, list);
-}
 
 static void RecursivePerft(Position *pos, const Depth depth) {
 
@@ -127,7 +48,13 @@ static void RecursivePerft(Position *pos, const Depth depth) {
     }
 
     MoveList list[1];
+    list->count = list->next = 0;
     GenAllMoves(pos, list);
+
+    if (depth == 1) {
+        leafNodes += list->count;
+        return;
+    }
 
     if (list->count == 0 && colorBB(sideToMove)) {
 
@@ -162,6 +89,7 @@ void Perft(char *line) {
     leafNodes = 0;
 
     MoveList list[1];
+    list->count = list->next = 0;
     GenAllMoves(pos, list);
 
     if (list->count == 0 && colorBB(sideToMove)) {
@@ -191,7 +119,7 @@ void Perft(char *line) {
     printf("\nPerft complete:"
            "\nTime  : %" PRId64 "ms"
            "\nLeaves: %" PRIu64
-           "\nLPS   : %" PRId64 "\n",
+           "\nLPS   : %" PRId64 "\n\n",
            elapsed, leafNodes, leafNodes * 1000 / elapsed);
     fflush(stdout);
 }

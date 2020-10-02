@@ -100,9 +100,8 @@ Key KeyAfter(const Position *pos, const Move move) {
     Square from = fromSq(move);
     Square to   = toSq(move);
     Piece piece = pieceOn(from);
-    Key key     = pos->key ^ SideKey;
 
-    return key ^ PieceKeys[piece][from] ^ PieceKeys[piece][to];
+    return pos->key ^ PieceKeys[piece][from] ^ PieceKeys[piece][to] ^ SideKey;
 }
 
 // Clears the board

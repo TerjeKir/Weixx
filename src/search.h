@@ -35,7 +35,6 @@ typedef struct {
 
 extern SearchLimits Limits;
 extern volatile bool ABORT_SIGNAL;
-extern bool noobbook;
 
 
 void SearchPosition(Position *pos, Thread *threads);

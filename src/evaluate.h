@@ -23,7 +23,6 @@
 
 
 extern const int Tempo;
-
 extern const int PieceValue[PIECE_NB];
 
 

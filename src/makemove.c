@@ -107,7 +107,7 @@ void MakeMove(Position *pos, const Move move) {
     const bool single = moveIsSingle(move);
 
     if (single)
-        AddPiece(pos, to, MakePiece(sideToMove), true);
+        AddPiece(pos, to, MakePiece(sideToMove), true), pos->rule50 = 0;
     else
         MovePiece(pos, from, to, true);
 
@@ -174,7 +174,7 @@ void MakeNullMove(Position *pos) {
 
     // Save misc info for takeback
     history(0).posKey = pos->key;
-    history(0).move   = NOMOVE;
+    history(0).move   = MOVE(0, 0, FLAG_NULL);
     history(0).rule50 = pos->rule50;
 
     // Increase ply

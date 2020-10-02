@@ -22,7 +22,7 @@
 
 
 // Return the next best move
-static Move PickNextMove(MoveList *list, const Move ttMove, const Move kill1, const Move kill2) {
+static Move PickNextMove(MoveList *list, const Move ttMove) {
 
     if (list->next == list->count)
         return NOMOVE;
@@ -39,27 +39,21 @@ static Move PickNextMove(MoveList *list, const Move ttMove, const Move kill1, co
     list->moves[bestIdx] = list->moves[list->next++];
 
     // Avoid returning the TT or killer moves again
-    if (bestMove == ttMove || bestMove == kill1 || bestMove == kill2)
-        return PickNextMove(list, ttMove, kill1, kill2);
+    if (bestMove == ttMove)
+        return PickNextMove(list, ttMove);
 
     return bestMove;
 }
 
 // Gives a score to each move left in the list
-static void ScoreMoves(MoveList *list, const Thread *thread, const int stage) {
+static void ScoreMoves(MoveList *list, const Thread *thread) {
 
     const Position *pos = &thread->pos;
 
     for (int i = list->next; i < list->count; ++i) {
 
         Move move = list->moves[i].move;
-
-        // TODO FIX
-        if (stage == GEN_NOISY)
-            list->moves[i].score = thread->history[sideToMove][fromSq(move)][toSq(move)];
-
-        if (stage == GEN_QUIET)
-            list->moves[i].score = thread->history[sideToMove][fromSq(move)][toSq(move)];
+        list->moves[i].score = thread->history[sideToMove][fromSq(move)][toSq(move)];
     }
 }
 
@@ -78,58 +72,17 @@ Move NextMove(MovePicker *mp) {
             return mp->ttMove;
 
             // fall through
-        case GEN_NOISY:
-            GenNoisyMoves(pos, mp->list);
-            ScoreMoves(mp->list, mp->thread, GEN_NOISY);
+        case GEN:
+            GenAllMoves(pos, mp->list);
+            ScoreMoves(mp->list, mp->thread);
             mp->stage++;
 
             // fall through
-        case NOISY_GOOD:
-            while ((move = PickNextMove(mp->list, mp->ttMove, NOMOVE, NOMOVE)))
-
-                // Save seemingly bad noisy moves for last
-                if (SEE(pos, move, 0))
-                    return move;
-                else
-                    mp->list->moves[mp->bads++].move = move;
-
-            mp->stage++;
-
-            // fall through
-        case KILLER1:
-            mp->stage++;
-            if (   mp->kill1 != mp->ttMove
-                && MoveIsLegal(pos, mp->kill1))
-                return mp->kill1;
-
-            // fall through
-        case KILLER2:
-            mp->stage++;
-            if (   mp->kill2 != mp->ttMove
-                && MoveIsLegal(pos, mp->kill2))
-                return mp->kill2;
-
-            // fall through
-        case GEN_QUIET:
-            if (!mp->onlyNoisy)
-                GenQuietMoves(pos, mp->list),
-                ScoreMoves(mp->list, mp->thread, GEN_QUIET);
-
-            mp->stage++;
-
-            // fall through
-        case QUIET:
-            if (!mp->onlyNoisy)
-                if ((move = PickNextMove(mp->list, mp->ttMove, mp->kill1, mp->kill2)))
+        case PLAY:
+            while ((move = PickNextMove(mp->list, mp->ttMove)))
                     return move;
 
-            mp->stage++;
-            mp->list->next = 0;
-            mp->list->moves[mp->bads].move = NOMOVE;
-
-            // fall through
-        case NOISY_BAD:
-            return mp->list->moves[mp->list->next++].move;
+            return NOMOVE;
 
         default:
             assert(0);
@@ -138,14 +91,9 @@ Move NextMove(MovePicker *mp) {
 }
 
 // Init normal movepicker
-void InitNormalMP(MovePicker *mp, MoveList *list, Thread *thread, Move ttMove, Move kill1, Move kill2) {
-    list->count   = list->next = 0;
-    mp->list      = list;
-    mp->thread    = thread;
-    mp->ttMove    = MoveIsLegal(&thread->pos, ttMove) ? ttMove : NOMOVE;
-    mp->stage     = mp->ttMove ? TTMOVE : GEN_NOISY;
-    mp->kill1     = kill1;
-    mp->kill2     = kill2;
-    mp->bads      = 0;
-    mp->onlyNoisy = false;
+void InitNormalMP(MovePicker *mp, MoveList *list, Thread *thread, Move ttMove) {
+    mp->list   = list;
+    mp->thread = thread;
+    mp->ttMove = MoveIsLegal(&thread->pos, ttMove) ? ttMove : NOMOVE;
+    mp->stage  = mp->ttMove ? TTMOVE : GEN;
 }

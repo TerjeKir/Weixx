@@ -35,7 +35,6 @@ typedef struct Thread {
     jmp_buf jumpBuffer;
 
     int history[2][64][64];
-    Move killers[MAXDEPTH][2];
 
     // Anything below here is not zeroed out between searches
     Position pos;
@@ -52,6 +51,5 @@ typedef struct Thread {
 
 Thread *InitThreads(int threadCount);
 uint64_t TotalNodes(const Thread *threads);
-uint64_t TotalTBHits(const Thread *threads);
 void Wait(Thread *thread, volatile bool *condition);
 void Wake(Thread *thread);

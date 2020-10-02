@@ -34,14 +34,13 @@
 #include "threads.h"
 #include "transposition.h"
 #include "search.h"
-#include "uci.h"
+#include "uai.h"
 
 
 int Reductions[32][32];
 
 SearchLimits Limits;
 volatile bool ABORT_SIGNAL = false;
-bool noobbook = false;
 
 
 // Initializes the late move reduction array
@@ -135,7 +134,7 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
     // Improving if not in check, and current eval is higher than 2 plies ago
     bool improving = pos->ply >= 2 && eval > history(-2).eval;
 
-    InitNormalMP(&mp, &list, thread, ttMove, killer1, killer2);
+    InitNormalMP(&mp, &list, thread, ttMove);
 
     const int oldAlpha = alpha;
     int moveCount = 0;
@@ -210,16 +209,8 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
                     thread->history[sideToMove][fromSq(move)][toSq(move)] += depth * depth;
 
                 // If score beats beta we have a cutoff
-                if (score >= beta) {
-
-                    // Update killers if quiet move
-                    if (killer1 != move) {
-                        killer2 = killer1;
-                        killer1 = move;
-                    }
-
+                if (score >= beta)
                     break;
-                }
             }
         }
     }
