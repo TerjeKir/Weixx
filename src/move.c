@@ -59,6 +59,8 @@ char *MoveToStr(const Move move) {
 
     if (moveIsNull(move))
         sprintf(moveStr, "0000");
+    else if (moveIsSingle(move))
+        sprintf(moveStr, "%c%c", ('a' + ft), ('1' + rt));
     else
         sprintf(moveStr, "%c%c%c%c", ('a' + ff), ('1' + rf), ('a' + ft), ('1' + rt));
 
