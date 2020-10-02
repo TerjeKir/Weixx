@@ -57,7 +57,7 @@ char *MoveToStr(const Move move) {
     int ft = FileOf(toSq(move));
     int rt = RankOf(toSq(move));
 
-    if (move == NOMOVE)
+    if (moveIsNull(move))
         sprintf(moveStr, "0000");
     else
         sprintf(moveStr, "%c%c%c%c", ('a' + ff), ('1' + rf), ('a' + ft), ('1' + rt));

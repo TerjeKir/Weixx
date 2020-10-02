@@ -45,7 +45,7 @@
 #define INLINE static inline __attribute__((always_inline))
 #define CONSTR static __attribute__((constructor)) void
 
-#define lastMoveNullMove (!root && history(-1).move == NOMOVE)
+#define lastMoveNullMove (!root && moveIsNull(history(-1).move))
 #define history(offset) (pos->gameHistory[pos->histPly + offset])
 #define killer1 (thread->killers[pos->ply][0])
 #define killer2 (thread->killers[pos->ply][1])

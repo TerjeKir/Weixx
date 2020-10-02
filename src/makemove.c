@@ -174,7 +174,7 @@ void MakeNullMove(Position *pos) {
 
     // Save misc info for takeback
     history(0).posKey = pos->key;
-    history(0).move   = NOMOVE;
+    history(0).move   = MOVE(0, 0, FLAG_NULL);
     history(0).rule50 = pos->rule50;
 
     // Increase ply
