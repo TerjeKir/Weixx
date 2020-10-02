@@ -126,9 +126,6 @@ static void UpdatePosition(Position *pos) {
             // Bitboards
             pos->pieceBB   |= BB(sq);
             colorBB(color) |= BB(sq);
-
-            // Material score
-            pos->material += PieceValue[piece];
         }
     }
 }

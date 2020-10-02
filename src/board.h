@@ -35,8 +35,6 @@ typedef struct Position {
     Bitboard pieceBB;
     Bitboard colorBB[2];
 
-    int material;
-
     Color stm;
     uint8_t rule50;
     uint8_t ply;
