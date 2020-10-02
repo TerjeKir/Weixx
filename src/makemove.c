@@ -107,7 +107,7 @@ void MakeMove(Position *pos, const Move move) {
     const bool single = moveIsSingle(move);
 
     if (single)
-        AddPiece(pos, to, MakePiece(sideToMove), true);
+        AddPiece(pos, to, MakePiece(sideToMove), true), pos->rule50 = 0;
     else
         MovePiece(pos, from, to, true);
 
