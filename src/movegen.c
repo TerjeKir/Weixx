@@ -58,4 +58,7 @@ void GenAllMoves(const Position *pos, MoveList *list) {
 
     list->count = list->next = 0;
     GenMoves(pos, list, sideToMove);
+
+    if (list->count == 0)
+        AddMove(list, 0, 0, FLAG_NULL);
 }

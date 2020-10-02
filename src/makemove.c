@@ -88,8 +88,50 @@ static void MovePiece(Position *pos, const Square from, const Square to, const b
     colorBB(color) ^= BB(from) ^ BB(to);
 }
 
+// Pass the turn without moving
+void MakeNullMove(Position *pos) {
+
+    // Save misc info for takeback
+    history(0).posKey = pos->key;
+    history(0).move   = MOVE(0, 0, FLAG_NULL);
+    history(0).rule50 = pos->rule50;
+
+    // Increase ply
+    pos->ply++;
+    pos->histPly++;
+
+    pos->rule50 = 0;
+
+    // Change side to play
+    sideToMove ^= 1;
+    HASH_SIDE;
+
+    assert(PositionOk(pos));
+}
+
+// Take back a null move
+void TakeNullMove(Position *pos) {
+
+    // Decrease ply
+    pos->histPly--;
+    pos->ply--;
+
+    // Change side to play
+    sideToMove ^= 1;
+
+    // Get info from history
+    pos->key    = history(0).posKey;
+    pos->rule50 = history(0).rule50;
+
+    assert(PositionOk(pos));
+}
+
+
 // Make a move
 void MakeMove(Position *pos, const Move move) {
+
+    if (moveIsNull(move))
+        return MakeNullMove(pos);
 
     // Save position
     history(0).posKey = pos->key;
@@ -130,18 +172,21 @@ void MakeMove(Position *pos, const Move move) {
 // Take back the previous move
 void TakeMove(Position *pos) {
 
+    // Get the move from history
+    const Move move = history(-1).move;
+    const Square from = fromSq(move);
+    const Square to = toSq(move);
+    const bool single = moveIsSingle(move);
+
+    if (moveIsNull(move))
+        return TakeNullMove(pos);
+
     // Decrement histPly, ply
     pos->histPly--;
     pos->ply--;
 
     // Change side to play
     sideToMove ^= 1;
-
-    // Get the move from history
-    const Move move = history(0).move;
-    const Square from = fromSq(move);
-    const Square to = toSq(move);
-    const bool single = moveIsSingle(move);
 
     if (single)
         ClearPiece(pos, to, false);
@@ -157,44 +202,6 @@ void TakeMove(Position *pos) {
     }
 
     // Get various info from history
-    pos->key    = history(0).posKey;
-    pos->rule50 = history(0).rule50;
-
-    assert(PositionOk(pos));
-}
-
-// Pass the turn without moving
-void MakeNullMove(Position *pos) {
-
-    // Save misc info for takeback
-    history(0).posKey = pos->key;
-    history(0).move   = MOVE(0, 0, FLAG_NULL);
-    history(0).rule50 = pos->rule50;
-
-    // Increase ply
-    pos->ply++;
-    pos->histPly++;
-
-    pos->rule50 = 0;
-
-    // Change side to play
-    sideToMove ^= 1;
-    HASH_SIDE;
-
-    assert(PositionOk(pos));
-}
-
-// Take back a null move
-void TakeNullMove(Position *pos) {
-
-    // Decrease ply
-    pos->histPly--;
-    pos->ply--;
-
-    // Change side to play
-    sideToMove ^= 1;
-
-    // Get info from history
     pos->key    = history(0).posKey;
     pos->rule50 = history(0).rule50;
 

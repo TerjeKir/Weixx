@@ -56,13 +56,6 @@ static void RecursivePerft(Position *pos, const Depth depth) {
         return;
     }
 
-    if (list->count == 0 && colorBB(sideToMove)) {
-
-        MakeNullMove(pos);
-        RecursivePerft(pos, depth - 1);
-        TakeNullMove(pos);
-    }
-
     for (int i = 0; i < list->count; ++i) {
 
         MakeMove(pos, list->moves[i].move);
@@ -91,13 +84,6 @@ void Perft(char *line) {
     MoveList list[1];
     list->count = list->next = 0;
     GenAllMoves(pos, list);
-
-    if (list->count == 0 && colorBB(sideToMove)) {
-
-        MakeNullMove(pos);
-        RecursivePerft(pos, depth - 1);
-        TakeNullMove(pos);
-    }
 
     for (int i = 0; i < list->count; ++i) {
 
