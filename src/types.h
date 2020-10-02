@@ -51,7 +51,6 @@
 #define colorBB(color) (pos->colorBB[(color)])
 #define sideToMove (pos->stm)
 #define pieceOn(sq) (pos->board[sq])
-
 #define BB(sq) (1ull << sq)
 
 

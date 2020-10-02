@@ -41,7 +41,7 @@ INLINE Bitboard LandingSquareBB(const Square sq, const int step) {
 }
 
 // Initializes non-slider attack lookups
-static void InitNonSliderAttacks() {
+CONSTR InitNonSliderAttacks() {
 
     Bitboard unused = fileHBB | rank8BB;
 
@@ -58,10 +58,4 @@ static void InitNonSliderAttacks() {
         for (int i = 0; i < 16; ++i)
             DoubleMove[sq] |= LandingSquareBB(sq, DoubleSteps[i]) & ~unused;
     }
-}
-
-// Initializes all bitboard lookups
-CONSTR InitBitMasks() {
-
-    InitNonSliderAttacks();
 }

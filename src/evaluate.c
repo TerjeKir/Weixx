@@ -35,9 +35,6 @@ int EvalPosition(const Position *pos) {
     // Material
     int eval = pos->material;
 
-    // Evaluate pieces
-    // eval += EvalPieces(pos);
-
     // Static evaluation shouldn't spill into mate-scores
     assert(abs(eval) < MATE_IN_MAX);
 

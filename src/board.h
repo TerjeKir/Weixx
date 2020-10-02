@@ -62,24 +62,13 @@ extern uint64_t SideKey;
 
 void ParseFen(const char *fen, Position *pos);
 Key KeyAfter(const Position *pos, Move move);
-bool SEE(const Position *pos, const Move move, const int threshold);
 #ifndef NDEBUG
 void PrintBoard(const Position *pos);
 bool PositionOk(const Position *pos);
 #endif
 #ifdef DEV
 void PrintBoard(const Position *pos);
-void MirrorBoard(Position *pos);
 #endif
-
-// Mirrors a square horizontally
-INLINE Square MirrorSquare(const Square sq) {
-    return sq ^ 56;
-}
-
-INLINE Square RelativeSquare(const Color color, const Square sq) {
-    return color == WHITE ? sq : MirrorSquare(sq);
-}
 
 INLINE int FileOf(const Square square) {
     return square & 7;
@@ -89,12 +78,6 @@ INLINE int RankOf(const Square square) {
     return square >> 3;
 }
 
-// Converts a rank into the rank relative to the given color
-INLINE int RelativeRank(const Color color, const int rank) {
-    return color == WHITE ? rank : RANK_8 - rank;
-}
-
-// Returns the distance between two squares
 INLINE int Distance(const Square sq1, const Square sq2) {
     return SqDistance[sq1][sq2];
 }

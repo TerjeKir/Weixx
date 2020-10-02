@@ -65,7 +65,7 @@ static void *BeginSearch(void *voidEngine) {
 }
 
 // Parses the given limits and creates a new thread to start the search
-INLINE void UCIGo(Engine *engine, char *str) {
+INLINE void UAIGo(Engine *engine, char *str) {
 
     ABORT_SIGNAL = false;
     InitTT(engine->threads);
@@ -75,7 +75,7 @@ INLINE void UCIGo(Engine *engine, char *str) {
 }
 
 // Parses a 'position' and sets up the board
-static void UCIPosition(Position *pos, char *str) {
+static void UAIPosition(Position *pos, char *str) {
 
     // Set up original position. This will either be a
     // position given as FEN, or the normal start position
@@ -106,7 +106,7 @@ static void UCIPosition(Position *pos, char *str) {
 }
 
 // Parses a 'setoption' and updates settings
-static void UCISetOption(Engine *engine, char *str) {
+static void UAISetOption(Engine *engine, char *str) {
 
     // Sets the size of the transposition table
     if (OptionName(str, "Hash")) {
@@ -128,8 +128,8 @@ static void UCISetOption(Engine *engine, char *str) {
     fflush(stdout);
 }
 
-// Prints UCI info
-static void UCIInfo() {
+// Prints UAI info
+static void UAIInfo() {
     printf("id name %s\n", NAME);
     printf("id author Terje Kirstihagen\n");
     printf("option name Hash type spin default %d min %d max %d\n", DEFAULTHASH, MINHASH, MAXHASH);
@@ -138,20 +138,20 @@ static void UCIInfo() {
 }
 
 // Stops searching
-static void UCIStop(Engine *engine) {
+static void UAIStop(Engine *engine) {
     ABORT_SIGNAL = true;
     Wake(engine->threads);
 }
 
 // Signals the engine is ready
-static void UCIIsReady(Engine *engine) {
+static void UAIIsReady(Engine *engine) {
     InitTT(engine->threads);
     printf("readyok\n");
     fflush(stdout);
 }
 
 // Reset for a new game
-static void UCINewGame(Engine *engine) {
+static void UAINewGame(Engine *engine) {
     ClearTT(engine->threads);
 }
 
@@ -164,7 +164,7 @@ static int HashInput(char *str) {
     return hash;
 }
 
-// Sets up the engine and follows UCI protocol commands
+// Sets up the engine and follows UAI protocol commands
 int main() {
 
     // Init engine
@@ -178,16 +178,16 @@ int main() {
     char str[INPUT_SIZE];
     while (GetInput(str)) {
         switch (HashInput(str)) {
-            case GO         : UCIGo(&engine, str);        break;
-            case UCI        : UCIInfo();                  break;
-            case ISREADY    : UCIIsReady(&engine);        break;
-            case POSITION   : UCIPosition(pos, str);      break;
-            case SETOPTION  : UCISetOption(&engine, str); break;
-            case UCINEWGAME : UCINewGame(&engine);        break;
-            case STOP       : UCIStop(&engine);           break;
-            case QUIT       : UCIStop(&engine);           return 0;
+            case GO         : UAIGo(&engine, str);        break;
+            case UAI        : UAIInfo();                  break;
+            case ISREADY    : UAIIsReady(&engine);        break;
+            case POSITION   : UAIPosition(pos, str);      break;
+            case SETOPTION  : UAISetOption(&engine, str); break;
+            case UAINEWGAME : UAINewGame(&engine);        break;
+            case STOP       : UAIStop(&engine);           break;
+            case QUIT       : UAIStop(&engine);           return 0;
 #ifdef DEV
-            // Non-UCI commands
+            // Non-UAI commands
             case EVAL       : PrintEval(pos);      break;
             case PRINT      : PrintBoard(pos);     break;
             case PERFT      : Perft(str);          break;

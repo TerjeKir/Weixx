@@ -41,7 +41,6 @@ int Reductions[32][32];
 
 SearchLimits Limits;
 volatile bool ABORT_SIGNAL = false;
-bool noobbook = false;
 
 
 // Initializes the late move reduction array

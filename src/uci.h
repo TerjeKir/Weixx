@@ -40,20 +40,19 @@ typedef struct {
 
 
 enum InputCommands {
-    // UCI
+    // UAI
     GO          = 11,
-    UCI         = 127,
+    UAI         = 125,
     STOP        = 28,
     QUIT        = 29,
     ISREADY     = 113,
     POSITION    = 17,
     SETOPTION   = 96,
-    UCINEWGAME  = 6,
-    // Non-UCI
+    UAINEWGAME  = 4,
+    // Non-UAI
     EVAL        = 26,
     PRINT       = 112,
     PERFT       = 116,
-    MIRRORTEST  = 4
 };
 
 

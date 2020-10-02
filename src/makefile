@@ -65,9 +65,6 @@ basic:
 dev:
 	$(BASIC) -DDEV
 
-tune:
-	$(BASIC) -DTUNE -fopenmp
-
 release:
 	$(RELEASE)-nopopcnt.exe
 	$(RELEASE)-popcnt.exe   $(POPCNT)

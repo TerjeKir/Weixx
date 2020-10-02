@@ -92,8 +92,8 @@ Move NextMove(MovePicker *mp) {
 
 // Init normal movepicker
 void InitNormalMP(MovePicker *mp, MoveList *list, Thread *thread, Move ttMove) {
-    mp->list      = list;
-    mp->thread    = thread;
-    mp->ttMove    = MoveIsLegal(&thread->pos, ttMove) ? ttMove : NOMOVE;
-    mp->stage     = mp->ttMove ? TTMOVE : GEN;
+    mp->list   = list;
+    mp->thread = thread;
+    mp->ttMove = MoveIsLegal(&thread->pos, ttMove) ? ttMove : NOMOVE;
+    mp->stage  = mp->ttMove ? TTMOVE : GEN;
 }
