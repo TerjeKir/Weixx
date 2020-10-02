@@ -23,7 +23,6 @@
 
 
 extern const int Tempo;
-extern const int PieceValue[PIECE_NB];
 
 
 // Returns a static evaluation of the position

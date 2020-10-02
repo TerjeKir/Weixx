@@ -22,9 +22,6 @@
 #include "evaluate.h"
 
 
-// Phase piece values, lookup used for futility pruning [phase][piece]
-const int PieceValue[PIECE_NB] = { 0, 200, 0, -200 };
-
 // Bonus for being the side to move
 const int Tempo = 15;
 
@@ -33,7 +30,7 @@ const int Tempo = 15;
 int EvalPosition(const Position *pos) {
 
     // Material
-    int eval = pos->material;
+    int eval = 200 * (PopCount(colorBB(WHITE)) - PopCount(colorBB(BLACK)));
 
     // Static evaluation shouldn't spill into mate-scores
     assert(abs(eval) < MATE_IN_MAX);

@@ -41,9 +41,6 @@ static void ClearPiece(Position *pos, const Square sq, const bool hash) {
     // Set square to empty
     pieceOn(sq) = EMPTY;
 
-    // Update material
-    pos->material -= PieceValue[piece];
-
     // Update bitboards
     pos->pieceBB   ^= BB(sq);
     colorBB(color) ^= BB(sq);
@@ -62,9 +59,6 @@ static void AddPiece(Position *pos, const Square sq, const Piece piece, const bo
 
     // Update square
     pieceOn(sq) = piece;
-
-    // Update material
-    pos->material += PieceValue[piece];
 
     // Update bitboards
     pos->pieceBB   |= BB(sq);
