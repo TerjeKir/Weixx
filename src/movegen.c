@@ -24,8 +24,6 @@
 #include "movegen.h"
 
 
-enum { QUIET, NOISY };
-
 // Constructs and adds a move to the move list
 INLINE void AddMove(MoveList *list, const Square from, const Square to, const int flag) {
 
@@ -33,9 +31,7 @@ INLINE void AddMove(MoveList *list, const Square from, const Square to, const in
 }
 
 // Generate moves
-static void GenMoves(const Position *pos, MoveList *list, const Color color, const int type) {
-
-    if (type == QUIET) return;
+static void GenMoves(const Position *pos, MoveList *list, const Color color) {
 
     const Bitboard empty = ~pos->pieceBB;
 
@@ -59,14 +55,9 @@ static void GenMoves(const Position *pos, MoveList *list, const Color color, con
         AddMove(list, 0, PopLsb(&singles), FLAG_SINGLE);
 }
 
-// Generate quiet moves
-void GenQuietMoves(const Position *pos, MoveList *list) {
-
-    GenMoves(pos, list, sideToMove, QUIET);
-}
-
 // Generate noisy moves
-void GenNoisyMoves(const Position *pos, MoveList *list) {
+void GenAllMoves(const Position *pos, MoveList *list) {
 
-    GenMoves(pos, list, sideToMove, NOISY);
+    list->count = list->next = 0;
+    GenMoves(pos, list, sideToMove);
 }

@@ -40,15 +40,6 @@
 
 static uint64_t leafNodes;
 
-// Generate all pseudo legal moves
-void GenAllMoves(const Position *pos, MoveList *list) {
-
-    list->count = list->next = 0;
-
-    GenNoisyMoves(pos, list);
-    GenQuietMoves(pos, list);
-}
-
 static void RecursivePerft(Position *pos, const Depth depth) {
 
     if (depth == 0) {
@@ -57,6 +48,7 @@ static void RecursivePerft(Position *pos, const Depth depth) {
     }
 
     MoveList list[1];
+    list->count = list->next = 0;
     GenAllMoves(pos, list);
 
     if (list->count == 0 && colorBB(sideToMove)) {
@@ -92,6 +84,7 @@ void Perft(char *line) {
     leafNodes = 0;
 
     MoveList list[1];
+    list->count = list->next = 0;
     GenAllMoves(pos, list);
 
     if (list->count == 0 && colorBB(sideToMove)) {
@@ -121,7 +114,7 @@ void Perft(char *line) {
     printf("\nPerft complete:"
            "\nTime  : %" PRId64 "ms"
            "\nLeaves: %" PRIu64
-           "\nLPS   : %" PRId64 "\n",
+           "\nLPS   : %" PRId64 "\n\n",
            elapsed, leafNodes, leafNodes * 1000 / elapsed);
     fflush(stdout);
 }

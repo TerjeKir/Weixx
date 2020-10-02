@@ -34,5 +34,4 @@ typedef struct {
 } MoveList;
 
 
-void GenNoisyMoves(const Position *pos, MoveList *list);
-void GenQuietMoves(const Position *pos, MoveList *list);
+void GenAllMoves(const Position *pos, MoveList *list);
