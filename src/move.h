@@ -37,7 +37,6 @@
 // Special move flags
 #define FLAG_NONE    0
 #define FLAG_SINGLE  0x1000
-#define FLAG_CAPTURE 0x2000
 
 // Move constructor
 #define MOVE(f, t, fl) ((f) | ((t) << 6) | (fl))
@@ -48,8 +47,6 @@
 
 // Move types
 #define moveIsSingle(move) (move & FLAG_SINGLE)
-#define moveIsNoisy(move)  (move & FLAG_CAPTURE)
-#define moveIsQuiet(move)  (!moveIsNoisy(move))
 
 
 bool MoveIsLegal(const Position *pos, Move move);

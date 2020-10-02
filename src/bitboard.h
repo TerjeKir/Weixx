@@ -83,13 +83,13 @@ INLINE bool Single(Bitboard bb) {
     return bb && !Multiple(bb);
 }
 
-//
+// Returns all single moves from square
 INLINE Bitboard SingleMoveBB(Square sq, Bitboard targets) {
 
     return SingleMove[sq] & targets;
 }
 
-//
+// Returns all double moves from square
 INLINE Bitboard DoubleMoveBB(Square sq, Bitboard targets) {
 
     return DoubleMove[sq] & targets;
