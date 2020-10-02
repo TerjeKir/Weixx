@@ -42,6 +42,9 @@ static uint64_t leafNodes;
 
 static void RecursivePerft(Position *pos, const Depth depth) {
 
+    if (!colorBB(sideToMove))
+        return;
+
     if (depth == 0) {
         leafNodes++;
         return;
