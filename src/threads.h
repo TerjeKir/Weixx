@@ -52,6 +52,5 @@ typedef struct Thread {
 
 Thread *InitThreads(int threadCount);
 uint64_t TotalNodes(const Thread *threads);
-uint64_t TotalTBHits(const Thread *threads);
 void Wait(Thread *thread, volatile bool *condition);
 void Wake(Thread *thread);
