@@ -34,7 +34,7 @@
 #include "threads.h"
 #include "transposition.h"
 #include "search.h"
-#include "uci.h"
+#include "uai.h"
 
 
 int Reductions[32][32];

@@ -28,7 +28,7 @@
 #include "threads.h"
 #include "time.h"
 #include "transposition.h"
-#include "uci.h"
+#include "uai.h"
 
 
 // Parses the time controls
@@ -134,7 +134,7 @@ static void UAIInfo() {
     printf("id author Terje Kirstihagen\n");
     printf("option name Hash type spin default %d min %d max %d\n", DEFAULTHASH, MINHASH, MAXHASH);
     printf("option name Threads type spin default %d min %d max %d\n", 1, 1, 2048);
-    printf("uciok\n"); fflush(stdout);
+    printf("uaiok\n"); fflush(stdout);
 }
 
 // Stops searching
