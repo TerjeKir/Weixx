@@ -167,16 +167,6 @@ static int HashInput(char *str) {
 // Sets up the engine and follows UCI protocol commands
 int main(int argc, char **argv) {
 
-    // Benchmark
-    if (argc > 1 && strstr(argv[1], "bench"))
-        return Benchmark(argc, argv), 0;
-
-    // Tuner
-#ifdef TUNE
-    if (argc > 1 && strstr(argv[1], "tune"))
-        return Tune(), 0;
-#endif
-
     // Init engine
     Engine engine = { .threads = InitThreads(1) };
     Position *pos = &engine.pos;

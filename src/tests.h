@@ -21,8 +21,6 @@
 #include "types.h"
 
 
-void Benchmark(int argc, char **argv);
-
 #ifdef DEV
 void Perft(char *line);
 void PrintEval(Position *pos);
