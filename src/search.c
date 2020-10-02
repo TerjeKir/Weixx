@@ -37,7 +37,7 @@
 #include "uci.h"
 
 
-int Reductions[2][32][32];
+int Reductions[32][32];
 
 SearchLimits Limits;
 volatile bool ABORT_SIGNAL = false;
@@ -49,8 +49,7 @@ CONSTR InitReductions() {
 
     for (int depth = 1; depth < 32; ++depth)
         for (int moves = 1; moves < 32; ++moves)
-            Reductions[0][depth][moves] = 0.60 + log(depth) * log(moves) / 3.5, // capture
-            Reductions[1][depth][moves] = 1.75 + log(depth) * log(moves) / 2.25; // quiet
+            Reductions[depth][moves] = 0.75 + log(depth) * log(moves) / 2.25;
 }
 
 // Check if current position is a repetition
@@ -66,7 +65,7 @@ static bool IsRepetition(const Position *pos) {
 }
 
 // Alpha Beta
-static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv, Move excluded) {
+static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
 
     Position *pos = &thread->pos;
     MovePicker mp;
@@ -83,6 +82,9 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv, M
 
     // Early exits
     if (!root) {
+
+        if (!colorBB(sideToMove))
+            return -MATE + pos->ply;
 
         // Position is drawn
         if (IsRepetition(pos) || pos->rule50 >= 100)
@@ -105,7 +107,7 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv, M
 
     // Probe transposition table
     bool ttHit;
-    Key posKey = pos->key ^ (((Key)excluded) << 32);
+    Key posKey = pos->key;
     TTEntry *tte = ProbeTT(posKey, &ttHit);
 
     Move ttMove = ttHit ? tte->move                         : NOMOVE;
@@ -132,104 +134,18 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv, M
 
     // Improving if not in check, and current eval is higher than 2 plies ago
     bool improving = pos->ply >= 2 && eval > history(-2).eval;
-    int score;
-
-    // Skip pruning in check, at root, during early iterations, and when proving singularity
-    if (root || !thread->doPruning || excluded)
-        goto move_loop;
-
-    // Reverse Futility Pruning
-    if (  !pvNode
-        && depth < 7
-        && eval - 225 * depth + 100 * improving >= beta)
-        return eval;
-
-    // Null Move Pruning
-    // if (  !pvNode
-    //     && depth >= 3
-    //     && eval >= beta
-    //     && history( 0).eval >= beta
-    //     && history(-1).move != NOMOVE) {
-
-    //     int R = 3 + depth / 5 + MIN(3, (eval - beta) / 256);
-
-    //     MakeNullMove(pos);
-    //     score = -AlphaBeta(thread, -beta, -beta+1, depth-R, &pvFromHere, 0);
-    //     TakeNullMove(pos);
-
-    //     // Cutoff
-    //     if (score >= beta) {
-    //         // Don't return unproven terminal win scores
-    //         return score >= MATE_IN_MAX ? beta : score;
-    //     }
-    // }
-
-    // ProbCut
-    // if (  !pvNode
-    //     && depth >= 5
-    //     && abs(beta) < MATE_IN_MAX
-    //     && !(   ttHit
-    //          && tte->bound & BOUND_UPPER
-    //          && ttScore < beta)) {
-
-    //     int threshold = beta + 200;
-
-    //     MovePicker pbMP;
-    //     MoveList pbList;
-    //     InitNoisyMP(&pbMP, &pbList, thread);
-
-    //     Move pbMove;
-    //     while ((pbMove = NextMove(&pbMP))) {
-
-    //         MakeMove(pos, pbMove);
-
-    //         // See if a quiescence search beats pbBeta
-    //         int pbScore = -Quiescence(thread, -threshold, -threshold+1);
-
-    //         // If it did do a proper search with reduced depth
-    //         if (pbScore >= threshold)
-    //             pbScore = -AlphaBeta(thread, -threshold, -threshold+1, depth-4, &pvFromHere, 0);
-
-    //         TakeMove(pos);
-
-    //         // Cut if the reduced depth search beats pbBeta
-    //         if (pbScore >= threshold)
-    //             return pbScore;
-    //     }
-    // }
-
-    // Internal iterative reduction based on Rebel's idea
-    if (depth >= 4 && !ttMove)
-        depth--;
-
-move_loop:
 
     InitNormalMP(&mp, &list, thread, ttMove, killer1, killer2);
 
-    Move quiets[32] = { 0 };
-
     const int oldAlpha = alpha;
-    int moveCount = 0, quietCount = 0;
+    int moveCount = 0;
     Move bestMove = NOMOVE;
     int bestScore = -INFINITE;
-    score = -INFINITE;
+    int score = -INFINITE;
 
     // Move loop
     Move move;
     while ((move = NextMove(&mp))) {
-
-        if (move == excluded) continue;
-
-        bool quiet = moveIsQuiet(move);
-
-        // Late move pruning
-        if (  !pvNode
-            && thread->doPruning
-            && bestScore > -MATE_IN_MAX
-            && quietCount > (3 + 2 * depth * depth) / (2 - improving)) {
-            mp.onlyNoisy = true;
-            continue;
-        }
 
         __builtin_prefetch(GetEntry(KeyAfter(pos, move)));
 
@@ -238,48 +154,7 @@ move_loop:
 
         Depth extension = 0;
 
-        // Singular extension
-        if (   depth > 8
-            && move == ttMove
-            && !excluded
-            && tte->depth > depth - 3
-            && tte->bound != BOUND_UPPER
-            && abs(ttScore) < MATE_IN_MAX / 4
-            && !root) {
-
-            // ttMove has been made to check legality
-            TakeMove(pos);
-
-            // Search to reduced depth with a zero window a bit lower than ttScore
-            int threshold = ttScore - depth * 2;
-            score = AlphaBeta(thread, threshold-1, threshold, depth/2, &pvFromHere, move);
-
-            // Extend as this move seems forced
-            if (score < threshold)
-                extension = 1;
-
-            // Replay ttMove
-            MakeMove(pos, move);
-        }
-
-        // Increment counts
         moveCount++;
-        if (quiet && quietCount < 32)
-            quiets[quietCount++] = move;
-
-        // If alpha > 0 and we take back our last move, opponent can do the same
-        // and get a fail high by repetition
-        if (   pos->rule50 >= 3
-            && pos->histPly >= 2
-            && alpha > 0
-            // The current move has been made and is -1, 2 back is then -3
-            && fromSq(move) == toSq(history(-3).move)
-            && toSq(move) == fromSq(history(-3).move)) {
-
-            score = 0;
-            pvFromHere.length = 0;
-            goto skip_search;
-        }
 
         const Depth newDepth = depth - 1 + extension;
 
@@ -290,7 +165,7 @@ move_loop:
         // Reduced depth zero-window search
         if (doLMR) {
             // Base reduction
-            int R = Reductions[quiet][MIN(31, depth)][MIN(31, moveCount)];
+            int R = Reductions[MIN(31, depth)][MIN(31, moveCount)];
             // Reduce less in pv nodes
             R -= pvNode;
             // Reduce less when improving
@@ -299,17 +174,15 @@ move_loop:
             // Depth after reductions, avoiding going straight to quiescence
             Depth RDepth = CLAMP(newDepth - R, 1, newDepth - 1);
 
-            score = -AlphaBeta(thread, -alpha-1, -alpha, RDepth, &pvFromHere, 0);
+            score = -AlphaBeta(thread, -alpha-1, -alpha, RDepth, &pvFromHere);
         }
         // Full depth zero-window search
         if (doLMR ? score > alpha : !pvNode || moveCount > 1)
-            score = -AlphaBeta(thread, -alpha-1, -alpha, newDepth, &pvFromHere, 0);
+            score = -AlphaBeta(thread, -alpha-1, -alpha, newDepth, &pvFromHere);
 
         // Full depth alpha-beta window search
         if (pvNode && ((score > alpha && score < beta) || moveCount == 1))
-            score = -AlphaBeta(thread, -beta, -alpha, newDepth, &pvFromHere, 0);
-
-skip_search:
+            score = -AlphaBeta(thread, -beta, -alpha, newDepth, &pvFromHere);
 
         // Undo the move
         TakeMove(pos);
@@ -333,14 +206,14 @@ skip_search:
                 alpha = score;
 
                 // Update search history
-                if (quiet && depth > 1)
+                if (depth > 1)
                     thread->history[sideToMove][fromSq(move)][toSq(move)] += depth * depth;
 
                 // If score beats beta we have a cutoff
                 if (score >= beta) {
 
                     // Update killers if quiet move
-                    if (quiet && killer1 != move) {
+                    if (killer1 != move) {
                         killer2 = killer1;
                         killer1 = move;
                     }
@@ -351,27 +224,12 @@ skip_search:
         }
     }
 
-    // Lower history scores of moves that failed to produce a cut
-    if (bestScore >= beta && moveIsQuiet(bestMove))
-        for (int i = 0; i < quietCount; ++i) {
-            Move m = quiets[i];
-            if (m == bestMove) continue;
-            thread->history[sideToMove][fromSq(m)][toSq(m)] -= depth * depth;
-        }
-
-    // Checkmate or stalemate TODO No moves and loss/win
-    if (!moveCount)
-        return excluded ? alpha
-                        : eval > 0 ?  MATE - pos->ply
-                                   : -MATE + pos->ply;
-
     // Store in TT
     const int flag = bestScore >= beta ? BOUND_LOWER
                    : alpha != oldAlpha ? BOUND_EXACT
                                        : BOUND_UPPER;
 
-    if (!excluded)
-        StoreTTEntry(tte, posKey, bestMove, ScoreToTT(bestScore, pos->ply), depth, flag);
+    StoreTTEntry(tte, posKey, bestMove, ScoreToTT(bestScore, pos->ply), depth, flag);
 
     return bestScore;
 }
@@ -403,7 +261,7 @@ static int AspirationWindow(Thread *thread) {
         if (alpha < -3500) alpha = -INFINITE;
         if (beta  >  3500) beta  =  INFINITE;
 
-        score = AlphaBeta(thread, alpha, beta, depth, &thread->pv, 0);
+        score = AlphaBeta(thread, alpha, beta, depth, &thread->pv);
 
         // Give an update when done, or after each iteration in long searches
         if (mainThread && (   (score > alpha && score < beta)
