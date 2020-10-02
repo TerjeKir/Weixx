@@ -51,6 +51,11 @@ static void RecursivePerft(Position *pos, const Depth depth) {
     list->count = list->next = 0;
     GenAllMoves(pos, list);
 
+    if (depth == 1) {
+        leafNodes += list->count;
+        return;
+    }
+
     if (list->count == 0 && colorBB(sideToMove)) {
 
         MakeNullMove(pos);
