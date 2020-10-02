@@ -39,7 +39,7 @@ INLINE Bitboard LandingSquareBB(const Square sq, const int step) {
     const Square to = sq + step;
     return (Bitboard)(to <= H8 && Distance(sq, to) <= 2) << to;
 }
-#include <stdio.h>
+
 // Initializes non-slider attack lookups
 static void InitNonSliderAttacks() {
 
