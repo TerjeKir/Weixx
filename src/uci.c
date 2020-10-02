@@ -165,7 +165,7 @@ static int HashInput(char *str) {
 }
 
 // Sets up the engine and follows UCI protocol commands
-int main(int argc, char **argv) {
+int main() {
 
     // Init engine
     Engine engine = { .threads = InitThreads(1) };
