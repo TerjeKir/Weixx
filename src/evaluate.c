@@ -32,9 +32,6 @@ int EvalPosition(const Position *pos) {
     // Material
     int eval = 200 * (PopCount(colorBB(WHITE)) - PopCount(colorBB(BLACK)));
 
-    // Static evaluation shouldn't spill into mate-scores
-    assert(abs(eval) < MATE_IN_MAX);
-
     // Return the evaluation, negated if we are black
     return (sideToMove == WHITE ? eval : -eval) + Tempo;
 }

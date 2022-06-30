@@ -45,8 +45,8 @@ enum {
     full    = 0xFFFFFFFFFFFFFF & ~unused,
 };
 
-extern const Bitboard FileBB[8];
-extern const Bitboard RankBB[8];
+extern const Bitboard FileBB[FILE_NB];
+extern const Bitboard RankBB[RANK_NB];
 
 extern Bitboard SingleMove[64];
 extern Bitboard DoubleMove[64];
@@ -76,12 +76,10 @@ INLINE int PopLsb(Bitboard *bb) {
 
 // Returns all single moves from square
 INLINE Bitboard SingleMoveBB(Square sq, Bitboard targets) {
-
     return SingleMove[sq] & targets;
 }
 
 // Returns all double moves from square
 INLINE Bitboard DoubleMoveBB(Square sq, Bitboard targets) {
-
     return DoubleMove[sq] & targets;
 }

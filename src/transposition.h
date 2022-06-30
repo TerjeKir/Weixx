@@ -32,30 +32,25 @@
 
 #define ValidBound(bound) (bound >= BOUND_UPPER && bound <= BOUND_EXACT)
 #define ValidScore(score) (score >= -MATE && score <= MATE)
-#define ValidDepth(depth) (depth >= 1 && depth < MAXDEPTH)
 
 
 enum { BOUND_NONE, BOUND_UPPER, BOUND_LOWER, BOUND_EXACT };
 
 typedef struct {
-
-    Key posKey;
+    Key key;
     Move move;
     int16_t score;
     uint8_t depth;
     uint8_t bound;
-
 } TTEntry;
 
 typedef struct {
-
     void *mem;
     TTEntry *table;
-    size_t count;
-    size_t currentMB;
-    size_t requestedMB;
+    uint64_t count;
+    uint64_t currentMB;
+    uint64_t requestedMB;
     bool dirty;
-
 } TranspositionTable;
 
 
@@ -64,7 +59,6 @@ extern TranspositionTable TT;
 
 // Mate scores are stored as mate in 0 as they depend on the current ply
 INLINE int ScoreToTT (const int score, const uint8_t ply) {
-
     return score >=  MATE_IN_MAX ? score + ply
          : score <= -MATE_IN_MAX ? score - ply
                                  : score;
@@ -72,20 +66,23 @@ INLINE int ScoreToTT (const int score, const uint8_t ply) {
 
 // Translates from mate in 0 to the proper mate score at current ply
 INLINE int ScoreFromTT (const int score, const uint8_t ply) {
-
     return score >=  MATE_IN_MAX ? score - ply
          : score <= -MATE_IN_MAX ? score + ply
                                  : score;
 }
 
-INLINE TTEntry *GetEntry(Key posKey) {
-
+INLINE TTEntry *GetEntry(Key key) {
     // https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
-    return &TT.table[((uint32_t)posKey * (uint64_t)TT.count) >> 32];
+    return &TT.table[((uint32_t)key * (uint64_t)TT.count) >> 32];
 }
 
-TTEntry* ProbeTT(Key posKey, bool *ttHit);
-void StoreTTEntry(TTEntry *tte, Key posKey, Move move, int score, Depth depth, int bound);
+INLINE void RequestTTSize(int megabytes) {
+    TT.requestedMB = megabytes;
+    puts("info string Hash will resize after next 'isready'.");
+}
+
+TTEntry* ProbeTT(Key key, bool *ttHit);
+void StoreTTEntry(TTEntry *tte, Key key, Move move, int score, Depth depth, int bound);
 int HashFull();
 void ClearTT(Thread *threads);
 void InitTT(Thread *threads);

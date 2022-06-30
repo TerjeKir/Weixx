@@ -24,12 +24,10 @@
 
 
 typedef struct {
-
     TimePoint start;
     int time, inc, movestogo, movetime, depth;
     int optimalUsage, maxUsage;
     bool timelimit, infinite;
-
 } SearchLimits;
 
 

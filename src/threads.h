@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <setjmp.h>
+
 #include "board.h"
 #include "types.h"
 

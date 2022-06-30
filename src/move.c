@@ -16,7 +16,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "bitboard.h"
@@ -71,8 +70,8 @@ char *MoveToStr(const Move move) {
 Move ParseMove(const char *str) {
 
     // Translate coordinates into square numbers
-    Square from = AlgebraicToSq(str[0], str[1]);
-    Square to   = AlgebraicToSq(str[2], str[3]);
+    Square from = StrToSq(str);
+    Square to   = StrToSq(str+2);
 
     int flag = Distance(from, to) == 1 ? FLAG_SINGLE : FLAG_NONE;
 

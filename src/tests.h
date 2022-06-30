@@ -24,5 +24,4 @@
 #ifdef DEV
 void Perft(char *line);
 void PrintEval(Position *pos);
-void MirrorEvalTest(Position *pos);
 #endif

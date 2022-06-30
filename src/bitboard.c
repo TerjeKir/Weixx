@@ -20,11 +20,11 @@
 #include "board.h"
 
 
-const Bitboard FileBB[8] = {
+const Bitboard FileBB[FILE_NB] = {
     fileABB, fileBBB, fileCBB, fileDBB, fileEBB, fileFBB, fileGBB, fileHBB
 };
 
-const Bitboard RankBB[8] = {
+const Bitboard RankBB[RANK_NB] = {
     rank1BB, rank2BB, rank3BB, rank4BB, rank5BB, rank6BB, rank7BB, rank8BB
 };
 
@@ -37,11 +37,11 @@ Bitboard DoubleMove[64];
 INLINE Bitboard LandingSquareBB(const Square sq, const int step) {
 
     const Square to = sq + step;
-    return (Bitboard)(to <= H8 && Distance(sq, to) <= 2) << to;
+    return (Bitboard)(to <= H8 && Distance(sq, to) <= 2) << (to & H8);
 }
 
 // Initializes non-slider attack lookups
-CONSTR InitNonSliderAttacks() {
+static void InitNonSliderAttacks() {
 
     int SingleSteps[8]  = {  -9, -8, -7, -1,  1,  7,  8,  9 };
     int DoubleSteps[16] = { -18,-17,-16,-15,-14,-10, -6, -2, 2, 6, 10, 14, 15, 16, 17, 18 };
@@ -56,4 +56,10 @@ CONSTR InitNonSliderAttacks() {
         for (int i = 0; i < 16; ++i)
             DoubleMove[sq] |= LandingSquareBB(sq, DoubleSteps[i]) & ~unused;
     }
+}
+
+// Initializes all bitboard lookups
+CONSTR InitBitMasks() {
+    InitDistance();
+    InitNonSliderAttacks();
 }

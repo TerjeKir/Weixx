@@ -19,7 +19,6 @@
 #include <math.h>
 #include <pthread.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -49,18 +48,6 @@ CONSTR InitReductions() {
     for (int depth = 1; depth < 32; ++depth)
         for (int moves = 1; moves < 32; ++moves)
             Reductions[depth][moves] = 0.75 + log(depth) * log(moves) / 2.25;
-}
-
-// Check if current position is a repetition
-static bool IsRepetition(const Position *pos) {
-
-    // Compare current posKey to posKeys in history, skipping
-    // opponents turns as that wouldn't be a repetition
-    for (int i = 4; i <= pos->rule50 && i <= pos->histPly; i += 2)
-        if (pos->key == history(-i).posKey)
-            return true;
-
-    return false;
 }
 
 // Alpha Beta
@@ -95,7 +82,7 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
             return 0;
 
         // Max depth reached
-        if (pos->ply >= MAXDEPTH)
+        if (pos->ply >= MAX_PLY)
             return EvalPosition(pos);
 
         // Mate distance pruning
@@ -111,8 +98,8 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
 
     // Probe transposition table
     bool ttHit;
-    Key posKey = pos->key;
-    TTEntry *tte = ProbeTT(posKey, &ttHit);
+    Key key = pos->key;
+    TTEntry *tte = ProbeTT(key, &ttHit);
 
     Move ttMove = ttHit ? tte->move                         : NOMOVE;
     int ttScore = ttHit ? ScoreFromTT(tte->score, pos->ply) : NOSCORE;
@@ -225,7 +212,7 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
                    : alpha != oldAlpha ? BOUND_EXACT
                                        : BOUND_UPPER;
 
-    StoreTTEntry(tte, posKey, bestMove, ScoreToTT(bestScore, pos->ply), depth, flag);
+    StoreTTEntry(tte, key, bestMove, ScoreToTT(bestScore, pos->ply), depth, flag);
 
     return bestScore;
 }
@@ -314,8 +301,8 @@ static void *IterativeDeepening(void *voidThread) {
             break;
 
         // Clear key history for seldepth calculation
-        for (int i = 1; i < MAXDEPTH; ++i)
-            history(i).posKey = 0;
+        for (int i = 1; i < MAX_PLY; ++i)
+            history(i).key = 0;
     }
 
     return NULL;

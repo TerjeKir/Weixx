@@ -22,21 +22,9 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <pthread.h>
-#include <setjmp.h>
 #include <stdbool.h>
-#include <stdint.h>
+#include <stdio.h>
 
-
-// Macro for printing size_t
-#ifdef _WIN32
-#  ifdef _WIN64
-#    define PRI_SIZET PRIu64
-#  else
-#    define PRI_SIZET PRIu32
-#  endif
-#else
-#  define PRI_SIZET "zu"
-#endif
 
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
@@ -67,10 +55,8 @@ typedef int32_t Depth;
 typedef int32_t Color;
 
 
-enum Limit {
-    MAXGAMEMOVES     = 256,
-    MAXPOSITIONMOVES = 256,
-    MAXDEPTH         = 128
+enum {
+    MAX_PLY = 100
 };
 
 enum Score {
@@ -93,11 +79,11 @@ enum Piece {
 };
 
 enum File {
-    FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, FILE_NONE
+    FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, FILE_NB
 };
 
 enum Rank {
-    RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, RANK_NONE
+    RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, RANK_NB
 };
 
 enum Square {
@@ -120,5 +106,5 @@ typedef enum Direction {
 
 typedef struct PV {
     int length;
-    Move line[MAXDEPTH];
+    Move line[MAX_PLY];
 } PV;
