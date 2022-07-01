@@ -30,14 +30,6 @@
 #define INPUT_SIZE 4096
 
 
-typedef struct {
-
-    Position pos;
-    Thread *threads;
-
-} Engine;
-
-
 enum InputCommands {
     // UAI
     GO          = 11,

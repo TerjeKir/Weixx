@@ -17,7 +17,6 @@
 */
 
 #include <math.h>
-#include <pthread.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,11 +39,11 @@ int Reductions[32][32];
 
 SearchLimits Limits;
 volatile bool ABORT_SIGNAL = false;
+volatile bool SEARCH_STOPPED = true;
 
 
 // Initializes the late move reduction array
 CONSTR InitReductions() {
-
     for (int depth = 1; depth < 32; ++depth)
         for (int moves = 1; moves < 32; ++moves)
             Reductions[depth][moves] = 0.75 + log(depth) * log(moves) / 2.25;
@@ -308,39 +307,30 @@ static void *IterativeDeepening(void *voidThread) {
     return NULL;
 }
 
-// Get ready to start a search
-static void PrepareSearch(Position *pos, Thread *threads) {
-
-    // Setup threads for a new search
-    for (int i = 0; i < threads->count; ++i) {
-        memset(&threads[i], 0, offsetof(Thread, pos));
-        memcpy(&threads[i].pos, pos, sizeof(Position));
-    }
-
-    // Mark TT as used
-    TT.dirty = true;
-}
-
 // Root of search
-void SearchPosition(Position *pos, Thread *threads) {
+void *SearchPosition(void *pos) {
+
+    SEARCH_STOPPED = false;
 
     InitTimeManagement();
+    PrepareSearch(pos);
 
-    PrepareSearch(pos, threads);
-
-    // Make extra threads and begin searching
-    for (int i = 1; i < threads->count; ++i)
-        pthread_create(&threads->pthreads[i], NULL, &IterativeDeepening, &threads[i]);
+    // Start helper threads and begin searching
+    StartHelpers(IterativeDeepening);
     IterativeDeepening(&threads[0]);
 
     // Wait for 'stop' in infinite search
-    if (Limits.infinite) Wait(threads, &ABORT_SIGNAL);
+    if (Limits.infinite) Wait(&ABORT_SIGNAL);
 
-    // Signal any extra threads to stop and wait for them
+    // Signal helper threads to stop and wait for them to finish
     ABORT_SIGNAL = true;
-    for (int i = 1; i < threads->count; ++i)
-            pthread_join(threads->pthreads[i], NULL);
+    WaitForHelpers();
 
     // Print conclusion
     PrintConclusion(threads);
+
+    SEARCH_STOPPED = true;
+    Wake();
+
+    return NULL;
 }

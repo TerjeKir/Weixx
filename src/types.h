@@ -21,7 +21,6 @@
 #define NDEBUG
 #include <assert.h>
 #include <inttypes.h>
-#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 

@@ -16,7 +16,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <pthread.h>
 #include <stdlib.h>
 
 #include "board.h"
@@ -49,22 +48,13 @@ static void ParseTimeControl(char *str, Color color) {
     Limits.depth = Limits.depth ?: 100;
 }
 
-// Begins a search with the given setup
-static void *BeginSearch(void *voidEngine) {
-
-    Engine *engine = voidEngine;
-    SearchPosition(&engine->pos, engine->threads);
-    return NULL;
-}
-
 // Parses the given limits and creates a new thread to start the search
-INLINE void Go(Engine *engine, char *str) {
-
+INLINE void Go(Position *pos, char *str) {
     ABORT_SIGNAL = false;
-    InitTT(engine->threads);
-    ParseTimeControl(str, engine->pos.stm);
-    pthread_create(&engine->threads->pthreads[0], NULL, &BeginSearch, engine);
-    pthread_detach(engine->threads->pthreads[0]);
+    InitTT();
+    TT.dirty = true;
+    ParseTimeControl(str, sideToMove);
+    StartMainThread(SearchPosition, pos);
 }
 
 // Parses a 'position' and sets up the board
@@ -126,21 +116,23 @@ static void Info() {
 }
 
 // Stops searching
-static void Stop(Engine *engine) {
+static void Stop() {
     ABORT_SIGNAL = true;
-    Wake(engine->threads);
+    Wake();
+    Wait(&SEARCH_STOPPED);
 }
 
 // Signals the engine is ready
-static void IsReady(Engine *engine) {
-    InitTT(engine->threads);
+static void IsReady() {
+    InitTT();
     printf("readyok\n");
     fflush(stdout);
 }
 
 // Reset for a new game
-static void NewGame(Engine *engine) {
-    ClearTT(engine->threads);
+static void NewGame() {
+    ClearTT();
+    ResetThreads();
 }
 
 // Hashes the first token in a string
@@ -156,29 +148,27 @@ static int HashInput(char *str) {
 int main() {
 
     // Init engine
-    Engine engine = { .threads = InitThreads(1) };
-    Position *pos = &engine.pos;
-
-    // Setup the default position
-    ParseFen(START_FEN, pos);
+    InitThreads(1);
+    Position pos;
+    ParseFen(START_FEN, &pos);
 
     // Input loop
     char str[INPUT_SIZE];
     while (GetInput(str)) {
         switch (HashInput(str)) {
-            case GO         : Go(&engine, str); break;
-            case UAI        : Info();           break;
-            case ISREADY    : IsReady(&engine); break;
-            case POSITION   : Pos(pos, str);    break;
-            case SETOPTION  : SetOption(str);   break;
-            case UAINEWGAME : NewGame(&engine); break;
-            case STOP       : Stop(&engine);    break;
-            case QUIT       : Stop(&engine);    return 0;
+            case GO         : Go(&pos, str);  break;
+            case UAI        : Info();         break;
+            case ISREADY    : IsReady();      break;
+            case POSITION   : Pos(&pos, str); break;
+            case SETOPTION  : SetOption(str); break;
+            case UAINEWGAME : NewGame();      break;
+            case STOP       : Stop();         break;
+            case QUIT       : Stop();         return 0;
 #ifdef DEV
             // Non-UAI commands
-            case EVAL       : PrintEval(pos);      break;
-            case PRINT      : PrintBoard(pos);     break;
-            case PERFT      : Perft(str);          break;
+            case EVAL       : PrintEval(&pos);  break;
+            case PRINT      : PrintBoard(&pos); break;
+            case PERFT      : Perft(str);       break;
 #endif
         }
     }
