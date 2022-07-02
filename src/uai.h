@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <stdio.h>
 #include <string.h>
 
 #include "board.h"
@@ -29,14 +28,6 @@
 
 #define START_FEN "x5o/7/7/7/7/7/o5x x 0 1"
 #define INPUT_SIZE 4096
-
-
-typedef struct {
-
-    Position pos;
-    Thread *threads;
-
-} Engine;
 
 
 enum InputCommands {
@@ -67,21 +58,6 @@ INLINE bool GetInput(char *str) {
     str[strcspn(str, "\r\n")] = '\0';
 
     return true;
-}
-
-// Checks if a string begins with another string
-INLINE bool BeginsWith(const char *str, const char *token) {
-    return strstr(str, token) == str;
-}
-
-// Tests whether the name in the setoption string matches
-INLINE bool OptionName(const char *str, const char *name) {
-    return BeginsWith(strstr(str, "name") + 5, name);
-}
-
-// Returns the (string) value of a setoption string
-INLINE char *OptionValue(const char *str) {
-    return strstr(str, "value") + 6;
 }
 
 // Sets a limit to the corresponding value in line, if any

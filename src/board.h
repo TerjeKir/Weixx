@@ -22,7 +22,7 @@
 
 
 typedef struct {
-    Key posKey;
+    Key key;
     Bitboard captures;
     Move move;
     int eval;
@@ -33,7 +33,7 @@ typedef struct Position {
 
     uint8_t board[64];
     Bitboard pieceBB;
-    Bitboard colorBB[2];
+    Bitboard colorBB[COLOR_NB];
 
     Color stm;
     uint8_t rule50;
@@ -45,7 +45,7 @@ typedef struct Position {
 
     uint64_t nodes;
 
-    History gameHistory[MAXGAMEMOVES];
+    History gameHistory[256];
 
 } Position;
 
@@ -58,6 +58,7 @@ extern uint64_t CastleKeys[16];
 extern uint64_t SideKey;
 
 
+void InitDistance();
 void ParseFen(const char *fen, Position *pos);
 Key KeyAfter(const Position *pos, Move move);
 #ifndef NDEBUG
@@ -88,10 +89,21 @@ INLINE Piece MakePiece(const Color color) {
     return (color << 1) + 1;
 }
 
-INLINE Square AlgebraicToSq(const char file, const char rank) {
-    return (file - 'a') + 8 * (rank - '1');
+INLINE Square MakeSquare(const int rank, const int file) {
+    return (rank * FILE_NB) + file;
+}
+
+INLINE Square StrToSq(const char *str) {
+    return MakeSquare(str[1] - '1', str[0] - 'a');
 }
 
 INLINE bool ValidPiece(const Piece piece) {
     return piece == w || piece == b;
+}
+
+INLINE bool IsRepetition(const Position *pos) {
+    for (int i = 4; i <= pos->rule50 && i <= pos->histPly; i += 2)
+        if (pos->key == history(-i).key)
+            return true;
+    return false;
 }

@@ -17,9 +17,7 @@
 */
 
 #include <math.h>
-#include <pthread.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -41,26 +39,14 @@ int Reductions[32][32];
 
 SearchLimits Limits;
 volatile bool ABORT_SIGNAL = false;
+volatile bool SEARCH_STOPPED = true;
 
 
 // Initializes the late move reduction array
 CONSTR InitReductions() {
-
     for (int depth = 1; depth < 32; ++depth)
         for (int moves = 1; moves < 32; ++moves)
             Reductions[depth][moves] = 0.75 + log(depth) * log(moves) / 2.25;
-}
-
-// Check if current position is a repetition
-static bool IsRepetition(const Position *pos) {
-
-    // Compare current posKey to posKeys in history, skipping
-    // opponents turns as that wouldn't be a repetition
-    for (int i = 4; i <= pos->rule50 && i <= pos->histPly; i += 2)
-        if (pos->key == history(-i).posKey)
-            return true;
-
-    return false;
 }
 
 // Alpha Beta
@@ -95,7 +81,7 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
             return 0;
 
         // Max depth reached
-        if (pos->ply >= MAXDEPTH)
+        if (pos->ply >= MAX_PLY)
             return EvalPosition(pos);
 
         // Mate distance pruning
@@ -111,8 +97,8 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
 
     // Probe transposition table
     bool ttHit;
-    Key posKey = pos->key;
-    TTEntry *tte = ProbeTT(posKey, &ttHit);
+    Key key = pos->key;
+    TTEntry *tte = ProbeTT(key, &ttHit);
 
     Move ttMove = ttHit ? tte->move                         : NOMOVE;
     int ttScore = ttHit ? ScoreFromTT(tte->score, pos->ply) : NOSCORE;
@@ -225,7 +211,7 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
                    : alpha != oldAlpha ? BOUND_EXACT
                                        : BOUND_UPPER;
 
-    StoreTTEntry(tte, posKey, bestMove, ScoreToTT(bestScore, pos->ply), depth, flag);
+    StoreTTEntry(tte, key, bestMove, ScoreToTT(bestScore, pos->ply), depth, flag);
 
     return bestScore;
 }
@@ -314,46 +300,37 @@ static void *IterativeDeepening(void *voidThread) {
             break;
 
         // Clear key history for seldepth calculation
-        for (int i = 1; i < MAXDEPTH; ++i)
-            history(i).posKey = 0;
+        for (int i = 1; i < MAX_PLY; ++i)
+            history(i).key = 0;
     }
 
     return NULL;
 }
 
-// Get ready to start a search
-static void PrepareSearch(Position *pos, Thread *threads) {
-
-    // Setup threads for a new search
-    for (int i = 0; i < threads->count; ++i) {
-        memset(&threads[i], 0, offsetof(Thread, pos));
-        memcpy(&threads[i].pos, pos, sizeof(Position));
-    }
-
-    // Mark TT as used
-    TT.dirty = true;
-}
-
 // Root of search
-void SearchPosition(Position *pos, Thread *threads) {
+void *SearchPosition(void *pos) {
+
+    SEARCH_STOPPED = false;
 
     InitTimeManagement();
+    PrepareSearch(pos);
 
-    PrepareSearch(pos, threads);
-
-    // Make extra threads and begin searching
-    for (int i = 1; i < threads->count; ++i)
-        pthread_create(&threads->pthreads[i], NULL, &IterativeDeepening, &threads[i]);
+    // Start helper threads and begin searching
+    StartHelpers(IterativeDeepening);
     IterativeDeepening(&threads[0]);
 
     // Wait for 'stop' in infinite search
-    if (Limits.infinite) Wait(threads, &ABORT_SIGNAL);
+    if (Limits.infinite) Wait(&ABORT_SIGNAL);
 
-    // Signal any extra threads to stop and wait for them
+    // Signal helper threads to stop and wait for them to finish
     ABORT_SIGNAL = true;
-    for (int i = 1; i < threads->count; ++i)
-            pthread_join(threads->pthreads[i], NULL);
+    WaitForHelpers();
 
     // Print conclusion
     PrintConclusion(threads);
+
+    SEARCH_STOPPED = true;
+    Wake();
+
+    return NULL;
 }

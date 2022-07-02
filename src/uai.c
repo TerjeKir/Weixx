@@ -16,8 +16,6 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <pthread.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "board.h"
@@ -38,53 +36,38 @@ static void ParseTimeControl(char *str, Color color) {
 
     Limits.start = Now();
 
-    // Read in relevant search constraints
+    // Parse relevant search constraints
     Limits.infinite = strstr(str, "infinite");
-    if (color == WHITE)
-        SetLimit(str, "wtime", &Limits.time),
-        SetLimit(str, "winc",  &Limits.inc);
-    else
-        SetLimit(str, "btime", &Limits.time),
-        SetLimit(str, "binc",  &Limits.inc);
+    SetLimit(str, color == WHITE ? "wtime" : "btime", &Limits.time);
+    SetLimit(str, color == WHITE ? "winc"  : "binc" , &Limits.inc);
     SetLimit(str, "movestogo", &Limits.movestogo);
     SetLimit(str, "movetime",  &Limits.movetime);
     SetLimit(str, "depth",     &Limits.depth);
 
     Limits.timelimit = Limits.time || Limits.movetime;
-
-    // If no depth limit is given, use MAXDEPTH - 1
-    Limits.depth = Limits.depth == 0 ? MAXDEPTH - 1 : Limits.depth;
-}
-
-// Begins a search with the given setup
-static void *BeginSearch(void *voidEngine) {
-
-    Engine *engine = voidEngine;
-    SearchPosition(&engine->pos, engine->threads);
-    return NULL;
+    Limits.depth = Limits.depth ?: 100;
 }
 
 // Parses the given limits and creates a new thread to start the search
-INLINE void UAIGo(Engine *engine, char *str) {
-
+INLINE void Go(Position *pos, char *str) {
     ABORT_SIGNAL = false;
-    InitTT(engine->threads);
-    ParseTimeControl(str, engine->pos.stm);
-    pthread_create(&engine->threads->pthreads[0], NULL, &BeginSearch, engine);
-    pthread_detach(engine->threads->pthreads[0]);
+    InitTT();
+    TT.dirty = true;
+    ParseTimeControl(str, sideToMove);
+    StartMainThread(SearchPosition, pos);
 }
 
 // Parses a 'position' and sets up the board
-static void UAIPosition(Position *pos, char *str) {
+static void Pos(Position *pos, char *str) {
+
+    #define IsFen (!strncmp(str, "position fen", 12))
 
     // Set up original position. This will either be a
     // position given as FEN, or the normal start position
-    BeginsWith(str, "position fen") ? ParseFen(str + 13, pos)
-                                    : ParseFen(START_FEN, pos);
+    ParseFen(IsFen ? str + 13 : START_FEN, pos);
 
     // Check if there are moves to be made from the initial position
-    if ((str = strstr(str, "moves")) == NULL)
-        return;
+    if ((str = strstr(str, "moves")) == NULL) return;
 
     // Loop over the moves and make them in succession
     char *move = strtok(str, " ");
@@ -103,33 +86,28 @@ static void UAIPosition(Position *pos, char *str) {
         if (pos->rule50 == 0)
             pos->histPly = 0;
     }
+
+    pos->nodes = 0;
 }
 
 // Parses a 'setoption' and updates settings
-static void UAISetOption(Engine *engine, char *str) {
+static void SetOption(char *str) {
 
-    // Sets the size of the transposition table
-    if (OptionName(str, "Hash")) {
+    char *optionName  = (strstr(str, "name") + 5);
+    char *optionValue = (strstr(str, "value") + 6);
 
-        TT.requestedMB = atoi(OptionValue(str));
+    #define OptionNameIs(name) (!strncmp(optionName, name, strlen(name)))
+    #define IntValue           (atoi(optionValue))
 
-        printf("Hash will use %" PRI_SIZET "MB after next 'isready'.\n", TT.requestedMB);
-
-    // Sets number of threads to use for searching
-    } else if (OptionName(str, "Threads")) {
-
-        free(engine->threads->pthreads);
-        free(engine->threads);
-        engine->threads = InitThreads(atoi(OptionValue(str)));
-
-        printf("Search will use %d threads.\n", engine->threads->count);
-    }
+    if      (OptionNameIs("Hash"         )) RequestTTSize(IntValue);
+    else if (OptionNameIs("Threads"      )) InitThreads(IntValue);
+    else puts("info string No such option.");
 
     fflush(stdout);
 }
 
 // Prints UAI info
-static void UAIInfo() {
+static void Info() {
     printf("id name %s\n", NAME);
     printf("id author Terje Kirstihagen\n");
     printf("option name Hash type spin default %d min %d max %d\n", DEFAULTHASH, MINHASH, MAXHASH);
@@ -138,21 +116,23 @@ static void UAIInfo() {
 }
 
 // Stops searching
-static void UAIStop(Engine *engine) {
+static void Stop() {
     ABORT_SIGNAL = true;
-    Wake(engine->threads);
+    Wake();
+    Wait(&SEARCH_STOPPED);
 }
 
 // Signals the engine is ready
-static void UAIIsReady(Engine *engine) {
-    InitTT(engine->threads);
+static void IsReady() {
+    InitTT();
     printf("readyok\n");
     fflush(stdout);
 }
 
 // Reset for a new game
-static void UAINewGame(Engine *engine) {
-    ClearTT(engine->threads);
+static void NewGame() {
+    ClearTT();
+    ResetThreads();
 }
 
 // Hashes the first token in a string
@@ -168,29 +148,27 @@ static int HashInput(char *str) {
 int main() {
 
     // Init engine
-    Engine engine = { .threads = InitThreads(1) };
-    Position *pos = &engine.pos;
-
-    // Setup the default position
-    ParseFen(START_FEN, pos);
+    InitThreads(1);
+    Position pos;
+    ParseFen(START_FEN, &pos);
 
     // Input loop
     char str[INPUT_SIZE];
     while (GetInput(str)) {
         switch (HashInput(str)) {
-            case GO         : UAIGo(&engine, str);        break;
-            case UAI        : UAIInfo();                  break;
-            case ISREADY    : UAIIsReady(&engine);        break;
-            case POSITION   : UAIPosition(pos, str);      break;
-            case SETOPTION  : UAISetOption(&engine, str); break;
-            case UAINEWGAME : UAINewGame(&engine);        break;
-            case STOP       : UAIStop(&engine);           break;
-            case QUIT       : UAIStop(&engine);           return 0;
+            case GO         : Go(&pos, str);  break;
+            case UAI        : Info();         break;
+            case ISREADY    : IsReady();      break;
+            case POSITION   : Pos(&pos, str); break;
+            case SETOPTION  : SetOption(str); break;
+            case UAINEWGAME : NewGame();      break;
+            case STOP       : Stop();         break;
+            case QUIT       : Stop();         return 0;
 #ifdef DEV
             // Non-UAI commands
-            case EVAL       : PrintEval(pos);      break;
-            case PRINT      : PrintBoard(pos);     break;
-            case PERFT      : Perft(str);          break;
+            case EVAL       : PrintEval(&pos);  break;
+            case PRINT      : PrintBoard(&pos); break;
+            case PERFT      : Perft(str);       break;
 #endif
         }
     }
@@ -198,8 +176,8 @@ int main() {
 
 // Translates an internal mate score into distance to mate
 INLINE int MateScore(const int score) {
-    return score > 0 ?  ((MATE - score) / 2) + 1
-                     : -((MATE + score) / 2);
+    int d = (MATE - abs(score) + 1) / 2;
+    return score > 0 ? d : -d;
 }
 
 // Print thinking
@@ -210,7 +188,7 @@ void PrintThinking(const Thread *thread, int score, int alpha, int beta) {
     // Determine whether we have a centipawn or mate score
     char *type = abs(score) >= MATE_IN_MAX ? "mate" : "cp";
 
-    // Determine if score is an upper or lower bound
+    // Determine if score is a lower bound, upper bound or exact
     char *bound = score >= beta  ? " lowerbound"
                 : score <= alpha ? " upperbound"
                                  : "";
@@ -223,9 +201,9 @@ void PrintThinking(const Thread *thread, int score, int alpha, int beta) {
     int hashFull      = HashFull();
     int nps           = (int)(1000 * nodes / (elapsed + 1));
 
-    Depth seldepth = MAXDEPTH;
+    Depth seldepth = MAX_PLY;
     for (; seldepth > 0; --seldepth)
-        if (history(seldepth-1).posKey != 0) break;
+        if (history(seldepth-1).key != 0) break;
 
     // Basic info
     printf("info depth %d seldepth %d score %s %d%s time %" PRId64

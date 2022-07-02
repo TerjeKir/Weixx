@@ -92,7 +92,7 @@ static void MovePiece(Position *pos, const Square from, const Square to, const b
 void MakeNullMove(Position *pos) {
 
     // Save misc info for takeback
-    history(0).posKey = pos->key;
+    history(0).key    = pos->key;
     history(0).move   = MOVE(0, 0, FLAG_NULL);
     history(0).rule50 = pos->rule50;
 
@@ -120,7 +120,7 @@ void TakeNullMove(Position *pos) {
     sideToMove ^= 1;
 
     // Get info from history
-    pos->key    = history(0).posKey;
+    pos->key    = history(0).key;
     pos->rule50 = history(0).rule50;
 
     assert(PositionOk(pos));
@@ -134,7 +134,7 @@ void MakeMove(Position *pos, const Move move) {
         return MakeNullMove(pos);
 
     // Save position
-    history(0).posKey = pos->key;
+    history(0).key    = pos->key;
     history(0).move   = move;
     history(0).rule50 = pos->rule50;
 
@@ -202,7 +202,7 @@ void TakeMove(Position *pos) {
     }
 
     // Get various info from history
-    pos->key    = history(0).posKey;
+    pos->key    = history(0).key;
     pos->rule50 = history(0).rule50;
 
     assert(PositionOk(pos));

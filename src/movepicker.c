@@ -51,7 +51,6 @@ static void ScoreMoves(MoveList *list, const Thread *thread) {
     const Position *pos = &thread->pos;
 
     for (int i = list->next; i < list->count; ++i) {
-
         Move move = list->moves[i].move;
         list->moves[i].score = thread->history[sideToMove][fromSq(move)][toSq(move)];
     }
@@ -87,7 +86,7 @@ Move NextMove(MovePicker *mp) {
         default:
             assert(0);
             return NOMOVE;
-        }
+    }
 }
 
 // Init normal movepicker
