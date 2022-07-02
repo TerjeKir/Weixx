@@ -35,7 +35,6 @@ Bitboard DoubleMove[64];
 // Helper function that returns a bitboard with the landing square of
 // the step, or an empty bitboard if the step would go outside the board
 INLINE Bitboard LandingSquareBB(const Square sq, const int step) {
-
     const Square to = sq + step;
     return (Bitboard)(to <= H8 && Distance(sq, to) <= 2) << (to & H8);
 }

@@ -54,7 +54,6 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
 
     Position *pos = &thread->pos;
     MovePicker mp;
-    MoveList list;
     PV pvFromHere;
     pv->length = 0;
 
@@ -125,7 +124,7 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
     // Improving if not in check, and current eval is higher than 2 plies ago
     bool improving = pos->ply >= 2 && eval > history(-2).eval;
 
-    InitNormalMP(&mp, &list, thread, ttMove);
+    InitNormalMP(&mp, thread, ttMove);
 
     const int oldAlpha = alpha;
     int moveCount = 0;

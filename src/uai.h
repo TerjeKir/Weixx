@@ -20,7 +20,6 @@
 
 #include <string.h>
 
-#include "board.h"
 #include "threads.h"
 
 

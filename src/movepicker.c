@@ -22,7 +22,9 @@
 
 
 // Return the next best move
-static Move PickNextMove(MoveList *list, const Move ttMove) {
+static Move PickNextMove(MovePicker *mp) {
+
+    MoveList *list = &mp->list;
 
     if (list->next == list->count)
         return NOMOVE;
@@ -39,8 +41,8 @@ static Move PickNextMove(MoveList *list, const Move ttMove) {
     list->moves[bestIdx] = list->moves[list->next++];
 
     // Avoid returning the TT or killer moves again
-    if (bestMove == ttMove)
-        return PickNextMove(list, ttMove);
+    if (bestMove == mp->ttMove)
+        return PickNextMove(mp);
 
     return bestMove;
 }
@@ -72,13 +74,13 @@ Move NextMove(MovePicker *mp) {
 
             // fall through
         case GEN:
-            GenAllMoves(pos, mp->list);
-            ScoreMoves(mp->list, mp->thread);
+            GenAllMoves(pos, &mp->list);
+            ScoreMoves(&mp->list, mp->thread);
             mp->stage++;
 
             // fall through
         case PLAY:
-            while ((move = PickNextMove(mp->list, mp->ttMove)))
+            while ((move = PickNextMove(mp)))
                     return move;
 
             return NOMOVE;
@@ -90,9 +92,9 @@ Move NextMove(MovePicker *mp) {
 }
 
 // Init normal movepicker
-void InitNormalMP(MovePicker *mp, MoveList *list, Thread *thread, Move ttMove) {
-    mp->list   = list;
+void InitNormalMP(MovePicker *mp, Thread *thread, Move ttMove) {
+    mp->list.count = mp->list.next = 0;
     mp->thread = thread;
     mp->ttMove = MoveIsLegal(&thread->pos, ttMove) ? ttMove : NOMOVE;
-    mp->stage  = mp->ttMove ? TTMOVE : GEN;
+    mp->stage = mp->ttMove ? TTMOVE : GEN;
 }

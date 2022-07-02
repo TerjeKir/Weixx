@@ -30,7 +30,7 @@
 
 
 // Parses the time controls
-static void ParseTimeControl(char *str, Color color) {
+static void ParseTimeControl(const char *str, const Color color) {
 
     memset(&Limits, 0, sizeof(SearchLimits));
 
@@ -49,7 +49,7 @@ static void ParseTimeControl(char *str, Color color) {
 }
 
 // Parses the given limits and creates a new thread to start the search
-INLINE void Go(Position *pos, char *str) {
+INLINE void Go(Position *pos, const char *str) {
     ABORT_SIGNAL = false;
     InitTT();
     TT.dirty = true;
@@ -79,7 +79,7 @@ static void Pos(Position *pos, char *str) {
         // Reset ply to avoid triggering asserts in debug mode in long games
         pos->ply = 0;
 
-        // Keep track of how many moves have been played so far for TM
+        // Keep track of how many moves have been played
         pos->gameMoves += sideToMove == WHITE;
 
         // Reset histPly so long games don't go out of bounds of arrays
@@ -99,8 +99,8 @@ static void SetOption(char *str) {
     #define OptionNameIs(name) (!strncmp(optionName, name, strlen(name)))
     #define IntValue           (atoi(optionValue))
 
-    if      (OptionNameIs("Hash"         )) RequestTTSize(IntValue);
-    else if (OptionNameIs("Threads"      )) InitThreads(IntValue);
+    if      (OptionNameIs("Hash"   )) RequestTTSize(IntValue);
+    else if (OptionNameIs("Threads")) InitThreads(IntValue);
     else puts("info string No such option.");
 
     fflush(stdout);

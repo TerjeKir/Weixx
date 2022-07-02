@@ -74,25 +74,21 @@ CONSTR InitHashKeys() {
         PieceKeys[b][sq] = Rand64();
 }
 
-// Generates a hash key for the position. During
-// a search this is incrementally updated instead.
+// Generates a hash key from scratch
 static Key GenPosKey(const Position *pos) {
 
     Key key = 0;
 
-    // Pieces
     for (Square sq = A1; sq <= H8; ++sq)
         if (pieceOn(sq) != EMPTY)
             key ^= PieceKeys[pieceOn(sq)][sq];
 
-    // Side to play
     if (sideToMove == WHITE) key ^= SideKey;
 
     return key;
 }
 
-// Calculates the position key after a move. Fails
-// for special moves.
+// Calculates the position key after a move. Fails for special moves.
 Key KeyAfter(const Position *pos, const Move move) {
 
     Square from = fromSq(move);
