@@ -67,7 +67,7 @@ pgo:
 	$(CLEAN)
 
 basic:
-	$(BASIC) -DDEV
+	$(BASIC)
 
 dev:
 	$(BASIC) -DDEV

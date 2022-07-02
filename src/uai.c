@@ -219,9 +219,8 @@ void PrintThinking(const Thread *thread, int score, int alpha, int beta) {
     fflush(stdout);
 }
 
-// Print conclusion of search - best move and ponder move
+// Print conclusion of search
 void PrintConclusion(const Thread *thread) {
-
     printf("bestmove %s", MoveToStr(thread->bestMove));
     if (thread->ponderMove)
         printf(" ponder %s", MoveToStr(thread->ponderMove));
