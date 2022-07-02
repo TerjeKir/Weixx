@@ -25,8 +25,7 @@ typedef struct {
     Key key;
     Bitboard captures;
     Move move;
-    int eval;
-    uint8_t rule50;
+    int rule50;
 } History;
 
 typedef struct Position {
@@ -36,8 +35,7 @@ typedef struct Position {
     Bitboard colorBB[COLOR_NB];
 
     Color stm;
-    uint8_t rule50;
-    uint8_t ply;
+    int rule50;
     uint16_t histPly;
     uint16_t gameMoves;
 

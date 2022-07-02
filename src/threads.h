@@ -24,17 +24,27 @@
 #include "types.h"
 
 
+#define SS_OFFSET 10
+
+
+typedef struct {
+    int eval;
+    Depth ply;
+    PV pv;
+} Stack;
+
 typedef struct Thread {
 
-    int score;
+    Stack ss[128];
+    jmp_buf jumpBuffer;
     Depth depth;
     bool doPruning;
+    bool uncertain;
+    int multiPV;
 
+    int score;
     Move bestMove;
     Move ponderMove;
-    PV pv;
-
-    jmp_buf jumpBuffer;
 
     int history[COLOR_NB][64][64];
 

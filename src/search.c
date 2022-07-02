@@ -50,15 +50,14 @@ CONSTR InitReductions() {
 }
 
 // Alpha Beta
-static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
+static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth) {
 
     Position *pos = &thread->pos;
     MovePicker mp;
-    PV pvFromHere;
-    pv->length = 0;
+    ss->pv.length = 0;
 
     const bool pvNode = alpha != beta - 1;
-    const bool root   = pos->ply == 0;
+    const bool root   = ss->ply == 0;
 
     // Check time situation
     if (OutOfTime(thread) || ABORT_SIGNAL)
@@ -68,24 +67,24 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
     if (!root) {
 
         if (!colorBB(sideToMove))
-            return -MATE + pos->ply;
+            return -MATE + ss->ply;
 
         if (pos->pieceBB == full)
             return PopCount(colorBB( sideToMove)) >
-                   PopCount(colorBB(!sideToMove)) ?  MATE_IN_MAX - pos->ply
-                                                  : -MATE_IN_MAX + pos->ply;
+                   PopCount(colorBB(!sideToMove)) ?  MATE_IN_MAX - ss->ply
+                                                  : -MATE_IN_MAX + ss->ply;
 
         // Position is drawn
         if (IsRepetition(pos) || pos->rule50 >= 100)
             return 0;
 
         // Max depth reached
-        if (pos->ply >= MAX_PLY)
+        if (ss->ply >= MAX_PLY)
             return EvalPosition(pos);
 
         // Mate distance pruning
-        alpha = MAX(alpha, -MATE + pos->ply);
-        beta  = MIN(beta,   MATE - pos->ply - 1);
+        alpha = MAX(alpha, -MATE + ss->ply);
+        beta  = MIN(beta,   MATE - ss->ply - 1);
         if (alpha >= beta)
             return alpha;
     }
@@ -100,7 +99,7 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
     TTEntry *tte = ProbeTT(key, &ttHit);
 
     Move ttMove = ttHit ? tte->move                         : NOMOVE;
-    int ttScore = ttHit ? ScoreFromTT(tte->score, pos->ply) : NOSCORE;
+    int ttScore = ttHit ? ScoreFromTT(tte->score, ss->ply) : NOSCORE;
 
     // Trust the ttScore in non-pvNodes as long as the entry depth is equal or higher
     if (!pvNode && ttHit && tte->depth >= depth) {
@@ -113,8 +112,8 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
     }
 
     // Do a static evaluation for pruning considerations
-    int eval = history(0).eval = lastMoveNullMove ? -history(-1).eval + 2 * Tempo
-                                                  : EvalPosition(pos);
+    int eval = ss->eval = lastMoveNullMove ? -(ss-1)->eval + 2 * Tempo
+                                           : EvalPosition(pos);
 
     // Use ttScore as eval if it is more informative
     if (   ttScore != NOSCORE
@@ -122,7 +121,7 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
         eval = ttScore;
 
     // Improving if not in check, and current eval is higher than 2 plies ago
-    bool improving = pos->ply >= 2 && eval > history(-2).eval;
+    bool improving = ss->ply >= 2 && eval > (ss-2)->eval;
 
     InitNormalMP(&mp, thread, ttMove);
 
@@ -163,15 +162,15 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
             // Depth after reductions, avoiding going straight to quiescence
             Depth RDepth = CLAMP(newDepth - R, 1, newDepth - 1);
 
-            score = -AlphaBeta(thread, -alpha-1, -alpha, RDepth, &pvFromHere);
+            score = -AlphaBeta(thread, ss+1, -alpha-1, -alpha, RDepth);
         }
         // Full depth zero-window search
         if (doLMR ? score > alpha : !pvNode || moveCount > 1)
-            score = -AlphaBeta(thread, -alpha-1, -alpha, newDepth, &pvFromHere);
+            score = -AlphaBeta(thread, ss+1, -alpha-1, -alpha, newDepth);
 
         // Full depth alpha-beta window search
         if (pvNode && ((score > alpha && score < beta) || moveCount == 1))
-            score = -AlphaBeta(thread, -beta, -alpha, newDepth, &pvFromHere);
+            score = -AlphaBeta(thread, ss+1, -beta, -alpha, newDepth);
 
         // Undo the move
         TakeMove(pos);
@@ -184,9 +183,9 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
 
             // Update the Principle Variation
             if ((score > alpha && pvNode) || (root && moveCount == 1)) {
-                pv->length = 1 + pvFromHere.length;
-                pv->line[0] = move;
-                memcpy(pv->line + 1, pvFromHere.line, sizeof(int) * pvFromHere.length);
+                ss->pv.length = 1 + (ss+1)->pv.length;
+                ss->pv.line[0] = move;
+                memcpy(ss->pv.line + 1, (ss+1)->pv.line, sizeof(int) * (ss+1)->pv.length);
             }
 
             // If score beats alpha we update alpha
@@ -210,13 +209,13 @@ static int AlphaBeta(Thread *thread, int alpha, int beta, Depth depth, PV *pv) {
                    : alpha != oldAlpha ? BOUND_EXACT
                                        : BOUND_UPPER;
 
-    StoreTTEntry(tte, key, bestMove, ScoreToTT(bestScore, pos->ply), depth, flag);
+    StoreTTEntry(tte, key, bestMove, ScoreToTT(bestScore, ss->ply), depth, flag);
 
     return bestScore;
 }
 
 // Aspiration window
-static int AspirationWindow(Thread *thread) {
+static int AspirationWindow(Thread *thread, Stack *ss) {
 
     bool mainThread = thread->index == 0;
     int score = thread->score;
@@ -242,12 +241,12 @@ static int AspirationWindow(Thread *thread) {
         if (alpha < -3500) alpha = -INFINITE;
         if (beta  >  3500) beta  =  INFINITE;
 
-        score = AlphaBeta(thread, alpha, beta, depth, &thread->pv);
+        score = AlphaBeta(thread, ss, alpha, beta, depth);
 
         // Give an update when done, or after each iteration in long searches
         if (mainThread && (   (score > alpha && score < beta)
                            || TimeSince(Limits.start) > 3000))
-            PrintThinking(thread, score, alpha, beta);
+            PrintThinking(thread, ss, score, alpha, beta);
 
         // Failed low, relax lower bound and search again
         if (score <= alpha) {
@@ -273,6 +272,7 @@ static void *IterativeDeepening(void *voidThread) {
 
     Thread *thread = voidThread;
     Position *pos = &thread->pos;
+    Stack *ss = thread->ss+SS_OFFSET;
     bool mainThread = thread->index == 0;
 
     // Iterative deepening
@@ -282,16 +282,16 @@ static void *IterativeDeepening(void *voidThread) {
         if (setjmp(thread->jumpBuffer)) break;
 
         // Search position, using aspiration windows for higher depths
-        thread->score = AspirationWindow(thread);
+        thread->score = AspirationWindow(thread, ss);
 
         // Only the main thread concerns itself with the rest
         if (!mainThread) continue;
 
-        bool uncertain = thread->pv.line[0] != thread->bestMove;
+        bool uncertain = ss->pv.line[0] != thread->bestMove;
 
         // Save bestMove and ponderMove before overwriting the pv next iteration
-        thread->bestMove   = thread->pv.line[0];
-        thread->ponderMove = thread->pv.length > 1 ? thread->pv.line[1] : NOMOVE;
+        thread->bestMove   = ss->pv.line[0];
+        thread->ponderMove = ss->pv.length > 1 ? ss->pv.line[1] : NOMOVE;
 
         // If an iteration finishes after optimal time usage, stop the search
         if (   Limits.timelimit

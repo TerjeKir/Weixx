@@ -30,9 +30,6 @@
 #include "transposition.h"
 
 
-#define PERFT_FEN "x5o/7/7/7/7/7/o5x x 0 1"
-
-
 #ifdef DEV
 
 // Depth 0 nodes                 1
