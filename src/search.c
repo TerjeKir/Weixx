@@ -100,16 +100,18 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
 
     Move ttMove = ttHit ? tte->move                         : NOMOVE;
     int ttScore = ttHit ? ScoreFromTT(tte->score, ss->ply) : NOSCORE;
+    Depth ttDepth = tte->depth;
+    int ttBound = tte->bound;
 
-    // Trust the ttScore in non-pvNodes as long as the entry depth is equal or higher
-    if (!pvNode && ttHit && tte->depth >= depth) {
+    if (ttMove && !MoveIsLegal(pos, ttMove))
+        ttHit = false, ttMove = NOMOVE, ttScore = NOSCORE;
 
-        // Check if ttScore causes a cutoff
-        if (ttScore >= beta ? tte->bound & BOUND_LOWER
-                            : tte->bound & BOUND_UPPER)
-
-            return ttScore;
-    }
+    // Trust TT if not a pvnode and the entry depth is sufficiently high
+    if (   !pvNode
+        && ttHit
+        && ttDepth >= depth
+        && (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
+        return ttScore;
 
     // Do a static evaluation for pruning considerations
     int eval = ss->eval = lastMoveNullMove ? -(ss-1)->eval + 2 * Tempo
@@ -117,7 +119,7 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
 
     // Use ttScore as eval if it is more informative
     if (   ttScore != NOSCORE
-        && (tte->bound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
+        && ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER))
         eval = ttScore;
 
     // Improving if not in check, and current eval is higher than 2 plies ago
@@ -146,26 +148,31 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
 
         const Depth newDepth = depth - 1 + extension;
 
-        bool doLMR =   depth > 2
-                    && moveCount > (2 + pvNode)
-                    && thread->doPruning;
+        bool doFullDepthSearch;
 
         // Reduced depth zero-window search
-        if (doLMR) {
+        if (   depth > 2
+            && moveCount > 2 + pvNode
+            && thread->doPruning) {
+
             // Base reduction
-            int R = Reductions[MIN(31, depth)][MIN(31, moveCount)];
+            int r = Reductions[MIN(31, depth)][MIN(31, moveCount)];
             // Reduce less in pv nodes
-            R -= pvNode;
+            r -= pvNode;
             // Reduce less when improving
-            R -= improving;
+            r -= improving;
 
             // Depth after reductions, avoiding going straight to quiescence
-            Depth RDepth = CLAMP(newDepth - R, 1, newDepth - 1);
+            Depth lmrDepth = CLAMP(newDepth - r, 1, newDepth - 1);
 
-            score = -AlphaBeta(thread, ss+1, -alpha-1, -alpha, RDepth);
-        }
+            score = -AlphaBeta(thread, ss+1, -alpha-1, -alpha, lmrDepth);
+
+            doFullDepthSearch = score > alpha;
+        } else
+            doFullDepthSearch = !pvNode || moveCount > 1;
+
         // Full depth zero-window search
-        if (doLMR ? score > alpha : !pvNode || moveCount > 1)
+        if (doFullDepthSearch)
             score = -AlphaBeta(thread, ss+1, -alpha-1, -alpha, newDepth);
 
         // Full depth alpha-beta window search
@@ -175,17 +182,17 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
         // Undo the move
         TakeMove(pos);
 
-        // Found a new best move in this position
+        // New best move
         if (score > bestScore) {
 
             bestScore = score;
             bestMove  = move;
 
-            // Update the Principle Variation
+            // Update PV
             if ((score > alpha && pvNode) || (root && moveCount == 1)) {
                 ss->pv.length = 1 + (ss+1)->pv.length;
                 ss->pv.line[0] = move;
-                memcpy(ss->pv.line + 1, (ss+1)->pv.line, sizeof(int) * (ss+1)->pv.length);
+                memcpy(ss->pv.line+1, (ss+1)->pv.line, sizeof(int) * (ss+1)->pv.length);
             }
 
             // If score beats alpha we update alpha
