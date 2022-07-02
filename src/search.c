@@ -113,18 +113,6 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
         && (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
         return ttScore;
 
-    // Do a static evaluation for pruning considerations
-    int eval = ss->eval = lastMoveNullMove ? -(ss-1)->eval + 2 * Tempo
-                                           : EvalPosition(pos);
-
-    // Use ttScore as eval if it is more informative
-    if (   ttScore != NOSCORE
-        && ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER))
-        eval = ttScore;
-
-    // Improving if not in check, and current eval is higher than 2 plies ago
-    bool improving = ss->ply >= 2 && eval > (ss-2)->eval;
-
     InitNormalMP(&mp, thread, ttMove);
 
     const int oldAlpha = alpha;
@@ -137,9 +125,6 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
     Move move;
     while ((move = NextMove(&mp))) {
 
-        __builtin_prefetch(GetEntry(KeyAfter(pos, move)));
-
-        // Make the move, skipping to the next if illegal
         MakeMove(pos, move);
 
         Depth extension = 0;
@@ -157,10 +142,6 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
 
             // Base reduction
             int r = Reductions[MIN(31, depth)][MIN(31, moveCount)];
-            // Reduce less in pv nodes
-            r -= pvNode;
-            // Reduce less when improving
-            r -= improving;
 
             // Depth after reductions, avoiding going straight to quiescence
             Depth lmrDepth = CLAMP(newDepth - r, 1, newDepth - 1);
@@ -201,8 +182,7 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
                 alpha = score;
 
                 // Update search history
-                if (depth > 1)
-                    thread->history[sideToMove][fromSq(move)][toSq(move)] += depth * depth;
+                thread->history[sideToMove][fromSq(move)][toSq(move)] += depth * depth;
 
                 // If score beats beta we have a cutoff
                 if (score >= beta)
@@ -224,54 +204,14 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
 // Aspiration window
 static int AspirationWindow(Thread *thread, Stack *ss) {
 
-    bool mainThread = thread->index == 0;
-    int score = thread->score;
     int depth = thread->depth;
-
-    const int initialWindow = 12;
-    int delta = 16;
 
     int alpha = -INFINITE;
     int beta  =  INFINITE;
 
-    int pruningLimit = Limits.timelimit ? (Limits.optimalUsage + 250) / 250 : 4;
-    thread->doPruning = depth > MIN(4, pruningLimit);
+    thread->doPruning = true;
 
-    // Shrink the window at higher depths
-    if (depth > 6)
-        alpha = MAX(score - initialWindow, -INFINITE),
-        beta  = MIN(score + initialWindow,  INFINITE);
-
-    // Search with aspiration window until the result is inside the window
-    while (true) {
-
-        if (alpha < -3500) alpha = -INFINITE;
-        if (beta  >  3500) beta  =  INFINITE;
-
-        score = AlphaBeta(thread, ss, alpha, beta, depth);
-
-        // Give an update when done, or after each iteration in long searches
-        if (mainThread && (   (score > alpha && score < beta)
-                           || TimeSince(Limits.start) > 3000))
-            PrintThinking(thread, ss, score, alpha, beta);
-
-        // Failed low, relax lower bound and search again
-        if (score <= alpha) {
-            alpha = MAX(alpha - delta, -INFINITE);
-            beta  = (alpha + beta) / 2;
-            depth = thread->depth;
-
-        // Failed high, relax upper bound and search again
-        } else if (score >= beta) {
-            beta = MIN(beta + delta, INFINITE);
-            depth -= (abs(score) < MATE_IN_MAX);
-
-        // Score within the bounds is accepted as correct
-        } else
-            return score;
-
-        delta += delta * 2 / 3;
-    }
+    return AlphaBeta(thread, ss, alpha, beta, depth);
 }
 
 // Iterative deepening
@@ -283,7 +223,7 @@ static void *IterativeDeepening(void *voidThread) {
     bool mainThread = thread->index == 0;
 
     // Iterative deepening
-    for (thread->depth = 1; thread->depth <= Limits.depth; ++thread->depth) {
+    while (++thread->depth <= (mainThread ? Limits.depth : MAX_PLY)) {
 
         // Jump here and return if we run out of allocated time mid-search
         if (setjmp(thread->jumpBuffer)) break;
