@@ -23,7 +23,7 @@
 #include "evaluate.h"
 #include "makemove.h"
 #include "move.h"
-#include "movegen.h"
+#include "movepicker.h"
 #include "search.h"
 #include "threads.h"
 #include "time.h"
@@ -35,85 +35,81 @@
 
 #ifdef DEV
 
+// Depth 0 nodes                 1
+// Depth 1 nodes                16
+// Depth 2 nodes               256
+// Depth 3 nodes             6,460
+// Depth 4 nodes           155,888
+// Depth 5 nodes         4,752,668
+// Depth 6 nodes       141,865,520
+// Depth 7 nodes     5,023,479,496
+// Depth 8 nodes   176,821,532,236
+// Depth 9 nodes 7,047,492,603,320
+
 /* Perft */
 
-static uint64_t leafNodes;
+static uint64_t RecursivePerft(Thread *thread, const Depth depth) {
 
-static void RecursivePerft(Position *pos, const Depth depth) {
+    Position *pos = &thread->pos;
 
-    if (!colorBB(sideToMove))
-        return;
+    if (depth == 0) return 1;
+    if (!colorBB(sideToMove)) return 0;
 
-    if (depth == 0) {
-        leafNodes++;
-        return;
-    }
+    uint64_t leafnodes = 0;
 
-    MoveList list[1];
-    list->count = list->next = 0;
-    GenAllMoves(pos, list);
+//     MoveList list;
+//     GenAllMoves(pos, &list);
 
-    if (depth == 1) {
-        leafNodes += list->count;
-        return;
-    }
+//     // if (depth == 1) return list.count; // Bulk counting
 
-    for (int i = 0; i < list->count; ++i) {
+//     for (int i = list.next; i < list.count; ++i) {
+//         Move move = list.moves[i].move;
+//         MakeMove(pos, move);
+//         leafnodes += RecursivePerft(thread, depth - 1);
+//         TakeMove(pos);
+//     }
 
-        MakeMove(pos, list->moves[i].move);
-        RecursivePerft(pos, depth - 1);
+    MovePicker mp;
+    InitNormalMP(&mp, thread, NOMOVE);
+
+    Move move;
+    while ((move = NextMove(&mp))) {
+        MakeMove(pos, move);
+        leafnodes += RecursivePerft(thread, depth - 1);
         TakeMove(pos);
     }
+
+    return leafnodes;
 }
 
 // Counts number of moves that can be made in a position to some depth
-void Perft(char *line) {
+void Perft(char *str) {
 
-    Position pos[1];
-    Depth depth = 5;
-    sscanf(line, "perft %d", &depth);
+    char *default_fen = "x5o/7/7/7/7/7/o5x x 0 1";
 
-    char *perftFen = line + 8;
-    !*perftFen ? ParseFen(PERFT_FEN, pos)
-               : ParseFen(perftFen,  pos);
+    strtok(str, " ");
+    char *d = strtok(NULL, " ");
+    char *fen = strtok(NULL, "\0") ?: default_fen;
 
-    printf("\nStarting perft to depth %d\n\n", depth);
+    Depth depth = d ? atoi(d) : 5;
+    ParseFen(fen, &threads->pos);
+
+    printf("\nPerft starting:\nDepth : %d\nFEN   : %s\n", depth, fen);
     fflush(stdout);
 
     const TimePoint start = Now();
-    leafNodes = 0;
-
-    MoveList list[1];
-    list->count = list->next = 0;
-    GenAllMoves(pos, list);
-
-    for (int i = 0; i < list->count; ++i) {
-
-        Move move = list->moves[i].move;
-
-        uint64_t oldCount = leafNodes;
-
-        MakeMove(pos, move);
-        RecursivePerft(pos, depth - 1);
-        TakeMove(pos);
-        uint64_t newCount = leafNodes - oldCount;
-
-        printf("move %d : %s : %" PRId64 "\n", i + 1, MoveToStr(move), newCount);
-        fflush(stdout);
-    }
-
+    uint64_t leafNodes = RecursivePerft(threads, depth);
     const TimePoint elapsed = TimeSince(start) + 1;
 
     printf("\nPerft complete:"
-           "\nTime  : %" PRId64 "ms"
-           "\nLeaves: %" PRIu64
-           "\nLPS   : %" PRId64 "\n\n",
-           elapsed, leafNodes, leafNodes * 1000 / elapsed);
+           "\nTime : %" PRId64 "ms"
+           "\nNPS  : %" PRId64
+           "\nNodes: %" PRIu64 "\n",
+           elapsed, leafNodes * 1000 / elapsed, leafNodes);
     fflush(stdout);
 }
 
 void PrintEval(Position *pos) {
-
     printf("%d\n", sideToMove == WHITE ? EvalPosition(pos) : -EvalPosition(pos));
     fflush(stdout);
 }
