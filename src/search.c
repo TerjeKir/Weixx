@@ -123,7 +123,7 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
         eval = ttScore;
 
     // Improving if not in check, and current eval is higher than 2 plies ago
-    bool improving = eval > (ss-2)->eval;
+    bool improving = ss->ply >= 2 && eval > (ss-2)->eval;
 
     InitNormalMP(&mp, thread, ttMove);
 
