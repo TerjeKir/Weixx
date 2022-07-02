@@ -96,13 +96,10 @@ void MakeNullMove(Position *pos) {
     history(0).move   = MOVE(0, 0, FLAG_NULL);
     history(0).rule50 = pos->rule50;
 
-    // Increase ply
+    // Incremental updates
     pos->ply++;
     pos->histPly++;
-
     pos->rule50 = 0;
-
-    // Change side to play
     sideToMove ^= 1;
     HASH_SIDE;
 
@@ -112,11 +109,9 @@ void MakeNullMove(Position *pos) {
 // Take back a null move
 void TakeNullMove(Position *pos) {
 
-    // Decrease ply
+    // Incremental updates
     pos->histPly--;
     pos->ply--;
-
-    // Change side to play
     sideToMove ^= 1;
 
     // Get info from history
@@ -156,13 +151,11 @@ void MakeMove(Position *pos, const Move move) {
         AddPiece(pos, victim, MakePiece(sideToMove), true);
     }
 
-    // Increment histPly, ply and 50mr
+    // Incremental updates
     pos->histPly++;
     pos->ply++;
     pos->rule50++;
     pos->nodes++;
-
-    // Change turn to play
     sideToMove ^= 1;
     HASH_SIDE;
 
@@ -181,11 +174,9 @@ void TakeMove(Position *pos) {
     if (moveIsNull(move))
         return TakeNullMove(pos);
 
-    // Decrement histPly, ply
+    // Incremental updates
     pos->histPly--;
     pos->ply--;
-
-    // Change side to play
     sideToMove ^= 1;
 
     if (single)

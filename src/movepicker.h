@@ -27,11 +27,11 @@ typedef enum MPStage {
 
 typedef struct MovePicker {
     Thread *thread;
-    MoveList *list;
+    MoveList list;
     MPStage stage;
     Move ttMove;
 } MovePicker;
 
 
 Move NextMove(MovePicker *mp);
-void InitNormalMP(MovePicker *mp, MoveList *list, Thread *thread, Move ttMove);
+void InitNormalMP(MovePicker *mp, Thread *thread, Move ttMove);
