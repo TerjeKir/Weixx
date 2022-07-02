@@ -97,7 +97,6 @@ void MakeNullMove(Position *pos) {
     history(0).rule50 = pos->rule50;
 
     // Incremental updates
-    pos->ply++;
     pos->histPly++;
     pos->rule50 = 0;
     sideToMove ^= 1;
@@ -111,7 +110,6 @@ void TakeNullMove(Position *pos) {
 
     // Incremental updates
     pos->histPly--;
-    pos->ply--;
     sideToMove ^= 1;
 
     // Get info from history
@@ -153,7 +151,6 @@ void MakeMove(Position *pos, const Move move) {
 
     // Incremental updates
     pos->histPly++;
-    pos->ply++;
     pos->rule50++;
     pos->nodes++;
     sideToMove ^= 1;
@@ -176,7 +173,6 @@ void TakeMove(Position *pos) {
 
     // Incremental updates
     pos->histPly--;
-    pos->ply--;
     sideToMove ^= 1;
 
     if (single)
