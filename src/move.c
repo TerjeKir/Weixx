@@ -17,6 +17,7 @@
 */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "bitboard.h"
 #include "board.h"
@@ -33,10 +34,9 @@ bool MoveIsLegal(const Position *pos, const Move move) {
     const Color color = sideToMove;
     const Square from = fromSq(move);
     const Square to = toSq(move);
-    const bool blocked = pos->pieceBB & BB(to);
 
     // Can only move to empty squares
-    if (blocked) return false;
+    if (pos->pieceBB & BB(to)) return false;
 
     // A single move requires an allied piece adjacent to the destination
     if (moveIsSingle(move))
@@ -68,6 +68,8 @@ char *MoveToStr(const Move move) {
 
 // Translates a string to a move
 Move ParseMove(const char *str) {
+
+    if (strstr(str, "0000") == str) return NULLMOVE;
 
     // Translate coordinates into square numbers
     Square from = StrToSq(str);

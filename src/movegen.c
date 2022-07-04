@@ -24,7 +24,6 @@
 
 // Constructs and adds a move to the move list
 INLINE void AddMove(MoveList *list, const Square from, const Square to, const int flag) {
-
     list->moves[list->count++].move = MOVE(from, to, flag);
 }
 
@@ -32,17 +31,13 @@ INLINE void AddMove(MoveList *list, const Square from, const Square to, const in
 static void GenMoves(const Position *pos, MoveList *list, const Color color) {
 
     const Bitboard empty = ~pos->pieceBB;
-
     Bitboard pieces = colorBB(color);
-
     Bitboard singles = 0;
 
     while (pieces) {
 
         Square from = PopLsb(&pieces);
-
         singles |= SingleMoveBB(from, empty);
-
         Bitboard doubles = DoubleMoveBB(from, empty);
 
         while (doubles)
@@ -60,5 +55,5 @@ void GenAllMoves(const Position *pos, MoveList *list) {
     GenMoves(pos, list, sideToMove);
 
     if (list->count == 0)
-        AddMove(list, 0, 0, FLAG_NULL);
+        list->moves[list->count++].move = NULLMOVE;
 }

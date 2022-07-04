@@ -61,31 +61,15 @@ static void AddPiece(Position *pos, const Square sq, const Piece piece, const bo
     pieceOn(sq) = piece;
 
     // Update bitboards
-    pos->pieceBB   |= BB(sq);
-    colorBB(color) |= BB(sq);
+    pos->pieceBB   ^= BB(sq);
+    colorBB(color) ^= BB(sq);
 }
 
 // Move a piece from one square to another
 static void MovePiece(Position *pos, const Square from, const Square to, const bool hash) {
-
-    const Piece piece = pieceOn(from);
-    const Color color = ColorOf(piece);
-
-    assert(ValidPiece(piece));
-    assert(pieceOn(to) == EMPTY);
-
-    // Hash out piece on old square, in on new square
-    if (hash)
-        HASH_PCE(piece, from),
-        HASH_PCE(piece, to);
-
-    // Set old square to empty, new to piece
-    pieceOn(from) = EMPTY;
-    pieceOn(to)   = piece;
-
-    // Update bitboards
-    pos->pieceBB   ^= BB(from) ^ BB(to);
-    colorBB(color) ^= BB(from) ^ BB(to);
+    Piece piece = pieceOn(from);
+    ClearPiece(pos, from, hash);
+    AddPiece(pos, to, piece, hash);
 }
 
 // Pass the turn without moving
@@ -118,7 +102,6 @@ void TakeNullMove(Position *pos) {
 
     assert(PositionOk(pos));
 }
-
 
 // Make a move
 void MakeMove(Position *pos, const Move move) {

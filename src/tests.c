@@ -50,7 +50,7 @@ static uint64_t RecursivePerft(Thread *thread, const Depth depth) {
     Position *pos = &thread->pos;
 
     if (depth == 0) return 1;
-    if (!colorBB(sideToMove)) return 0;
+    if (!colorBB(sideToMove) || pos->pieceBB == full) return 0;
 
     uint64_t leafnodes = 0;
 
@@ -78,6 +78,30 @@ static uint64_t RecursivePerft(Thread *thread, const Depth depth) {
 
     return leafnodes;
 }
+
+// static uint64_t SplitPerft(Thread *thread, const Depth depth) {
+
+//     Position *pos = &thread->pos;
+
+//     if (depth == 0) return 1;
+//     if (!colorBB(sideToMove) || pos->pieceBB == full) return 0;
+
+//     uint64_t leafnodes = 0;
+
+//     MovePicker mp;
+//     InitNormalMP(&mp, thread, NOMOVE);
+
+//     Move move;
+//     while ((move = NextMove(&mp))) {
+//         MakeMove(pos, move);
+//         uint64_t perft = RecursivePerft(thread, depth - 1);
+//         printf("%s: %" PRIu64 "\n", MoveToStr(move), perft);
+//         leafnodes += perft;
+//         TakeMove(pos);
+//     }
+
+//     return leafnodes;
+// }
 
 // Counts number of moves that can be made in a position to some depth
 void Perft(char *str) {
