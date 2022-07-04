@@ -35,19 +35,10 @@
 #include "uai.h"
 
 
-int Reductions[32][32];
-
 SearchLimits Limits;
 volatile bool ABORT_SIGNAL = false;
 volatile bool SEARCH_STOPPED = true;
 
-
-// Initializes the late move reduction array
-CONSTR InitReductions() {
-    for (int depth = 1; depth < 32; ++depth)
-        for (int moves = 1; moves < 32; ++moves)
-            Reductions[depth][moves] = 0.75 + log(depth) * log(moves) / 2.25;
-}
 
 // Alpha Beta
 static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth) {
@@ -133,32 +124,7 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
 
         const Depth newDepth = depth - 1 + extension;
 
-        bool doFullDepthSearch;
-
-        // Reduced depth zero-window search
-        if (   depth > 2
-            && moveCount > 2 + pvNode
-            && thread->doPruning) {
-
-            // Base reduction
-            int r = Reductions[MIN(31, depth)][MIN(31, moveCount)];
-
-            // Depth after reductions, avoiding going straight to quiescence
-            Depth lmrDepth = CLAMP(newDepth - r, 1, newDepth - 1);
-
-            score = -AlphaBeta(thread, ss+1, -alpha-1, -alpha, lmrDepth);
-
-            doFullDepthSearch = score > alpha;
-        } else
-            doFullDepthSearch = !pvNode || moveCount > 1;
-
-        // Full depth zero-window search
-        if (doFullDepthSearch)
-            score = -AlphaBeta(thread, ss+1, -alpha-1, -alpha, newDepth);
-
-        // Full depth alpha-beta window search
-        if (pvNode && ((score > alpha && score < beta) || moveCount == 1))
-            score = -AlphaBeta(thread, ss+1, -beta, -alpha, newDepth);
+        score = -AlphaBeta(thread, ss+1, -beta, -alpha, newDepth);
 
         // Undo the move
         TakeMove(pos);
