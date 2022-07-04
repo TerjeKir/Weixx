@@ -28,8 +28,6 @@
 0000 0000 0010 0000 0000 0000 -> Single << 13
 */
 
-#define NOMOVE 0
-
 // Fields
 #define MOVE_FROM   0x00003F
 #define MOVE_TO     0x000FC0
@@ -38,6 +36,10 @@
 #define FLAG_NONE    0
 #define FLAG_SINGLE  0x1000
 #define FLAG_NULL    0x2000
+
+// Special moves
+#define NOMOVE   0
+#define NULLMOVE FLAG_NULL
 
 // Move constructor
 #define MOVE(f, t, fl) ((f) | ((t) << 6) | (fl))
