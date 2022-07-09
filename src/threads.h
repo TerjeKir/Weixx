@@ -46,8 +46,6 @@ typedef struct Thread {
     Move bestMove;
     Move ponderMove;
 
-    int history[COLOR_NB][64][64];
-
     // Anything below here is not zeroed out between searches
     Position pos;
 

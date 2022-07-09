@@ -67,7 +67,7 @@ static uint64_t RecursivePerft(Thread *thread, const Depth depth) {
 //     }
 
     MovePicker mp;
-    InitNormalMP(&mp, thread, NOMOVE);
+    InitNormalMP(&mp, thread);
 
     Move move;
     while ((move = NextMove(&mp))) {

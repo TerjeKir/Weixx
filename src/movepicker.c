@@ -29,61 +29,24 @@ static Move PickNextMove(MovePicker *mp) {
     if (list->next == list->count)
         return NOMOVE;
 
-    int bestIdx = list->next;
-    int bestScore = list->moves[bestIdx].score;
-
-    for (int i = list->next + 1; i < list->count; ++i)
-        if (list->moves[i].score > bestScore)
-            bestScore = list->moves[i].score,
-            bestIdx = i;
-
-    Move bestMove = list->moves[bestIdx].move;
-    list->moves[bestIdx] = list->moves[list->next++];
-
-    // Avoid returning the TT or killer moves again
-    if (bestMove == mp->ttMove)
-        return PickNextMove(mp);
-
-    return bestMove;
-}
-
-// Gives a score to each move left in the list
-static void ScoreMoves(MoveList *list, const Thread *thread) {
-
-    const Position *pos = &thread->pos;
-
-    for (int i = list->next; i < list->count; ++i) {
-        Move move = list->moves[i].move;
-        list->moves[i].score = thread->history[sideToMove][fromSq(move)][toSq(move)];
-    }
+    return list->moves[list->next++].move;
 }
 
 // Returns the next move to try in a position
 Move NextMove(MovePicker *mp) {
 
-    Move move;
     Position *pos = &mp->thread->pos;
 
     // Switch on stage, falls through to the next stage
     // if a move isn't returned in the current stage.
     switch (mp->stage) {
-
-        case TTMOVE:
-            mp->stage++;
-            return mp->ttMove;
-
-            // fall through
         case GEN:
             GenAllMoves(pos, &mp->list);
-            ScoreMoves(&mp->list, mp->thread);
             mp->stage++;
 
             // fall through
         case PLAY:
-            while ((move = PickNextMove(mp)))
-                    return move;
-
-            return NOMOVE;
+            return PickNextMove(mp);
 
         default:
             assert(0);
@@ -92,9 +55,8 @@ Move NextMove(MovePicker *mp) {
 }
 
 // Init normal movepicker
-void InitNormalMP(MovePicker *mp, Thread *thread, Move ttMove) {
+void InitNormalMP(MovePicker *mp, Thread *thread) {
     mp->list.count = mp->list.next = 0;
     mp->thread = thread;
-    mp->ttMove = ttMove;
-    mp->stage = ttMove ? TTMOVE : GEN;
+    mp->stage = GEN;
 }

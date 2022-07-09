@@ -84,31 +84,9 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
     if (depth <= 0)
         return EvalPosition(pos);
 
-    // Probe transposition table
-    bool ttHit;
-    Key key = pos->key;
-    TTEntry *tte = ProbeTT(key, &ttHit);
+    InitNormalMP(&mp, thread);
 
-    Move ttMove = ttHit ? tte->move : NOMOVE;
-    int ttScore = ttHit ? ScoreFromTT(tte->score, ss->ply) : NOSCORE;
-    Depth ttDepth = tte->depth;
-    int ttBound = tte->bound;
-
-    if (ttMove && !MoveIsLegal(pos, ttMove))
-        ttHit = false, ttMove = NOMOVE, ttScore = NOSCORE;
-
-    // Trust TT if not a pvnode and the entry depth is sufficiently high
-    if (   !pvNode
-        && ttHit
-        && ttDepth >= depth
-        && (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
-        return ttScore;
-
-    InitNormalMP(&mp, thread, ttMove);
-
-    const int oldAlpha = alpha;
     int moveCount = 0;
-    Move bestMove = NOMOVE;
     int bestScore = -INFINITE;
     int score = -INFINITE;
 
@@ -133,7 +111,6 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
         if (score > bestScore) {
 
             bestScore = score;
-            bestMove  = move;
 
             // Update PV
             if ((score > alpha && pvNode) || (root && moveCount == 1)) {
@@ -147,22 +124,12 @@ static int AlphaBeta(Thread *thread, Stack *ss, int alpha, int beta, Depth depth
 
                 alpha = score;
 
-                // Update search history
-                thread->history[sideToMove][fromSq(move)][toSq(move)] += depth * depth;
-
                 // If score beats beta we have a cutoff
                 if (score >= beta)
                     break;
             }
         }
     }
-
-    // Store in TT
-    const int flag = bestScore >= beta ? BOUND_LOWER
-                   : alpha != oldAlpha ? BOUND_EXACT
-                                       : BOUND_UPPER;
-
-    StoreTTEntry(tte, key, bestMove, ScoreToTT(bestScore, ss->ply), depth, flag);
 
     return bestScore;
 }
@@ -177,7 +144,11 @@ static int AspirationWindow(Thread *thread, Stack *ss) {
 
     thread->doPruning = true;
 
-    return AlphaBeta(thread, ss, alpha, beta, depth);
+    int score = AlphaBeta(thread, ss, alpha, beta, depth);
+
+    PrintThinking(thread, ss, score, alpha, beta);
+
+    return score;
 }
 
 // Iterative deepening

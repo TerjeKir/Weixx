@@ -23,7 +23,7 @@
 
 
 // Bonus for being the side to move
-const int Tempo = 15;
+const int Tempo = 0;
 
 
 // Calculate a static evaluation of a position
