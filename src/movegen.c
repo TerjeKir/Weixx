@@ -30,22 +30,21 @@ INLINE void AddMove(MoveList *list, const Square from, const Square to, const in
 // Generate moves
 static void GenMoves(const Position *pos, MoveList *list, const Color color) {
 
-    const Bitboard empty = ~pos->pieceBB;
+    const Bitboard empty = ~pos->pieceBB & ~unused;
     Bitboard pieces = colorBB(color);
-    Bitboard singles = 0;
+    Bitboard singles = SingleMovesBB(pieces, empty);
+
+    while (singles)
+        AddMove(list, 0, PopLsb(&singles), FLAG_SINGLE);
 
     while (pieces) {
 
         Square from = PopLsb(&pieces);
-        singles |= SingleMoveBB(from, empty);
         Bitboard doubles = DoubleMoveBB(from, empty);
 
         while (doubles)
             AddMove(list, from, PopLsb(&doubles), FLAG_NONE);
     }
-
-    while (singles)
-        AddMove(list, 0, PopLsb(&singles), FLAG_SINGLE);
 }
 
 // Generate noisy moves

@@ -83,3 +83,10 @@ INLINE Bitboard SingleMoveBB(Square sq, Bitboard targets) {
 INLINE Bitboard DoubleMoveBB(Square sq, Bitboard targets) {
     return DoubleMove[sq] & targets;
 }
+
+INLINE Bitboard SingleMovesBB(Bitboard pieces, Bitboard targets) {
+
+    Bitboard singles = pieces << 1 | pieces << 9 | pieces >> 7 | pieces << 8 | pieces >> 8 | pieces >> 1 | pieces >> 9 | pieces << 7;
+
+    return singles & targets;
+}

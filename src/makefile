@@ -59,18 +59,18 @@ BASIC   = $(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
 RELEASE = $(CC) $(RFLAGS) $(SRC) $(LIBS) -o $(EXE)
 
 # Targets
+basic:
+	$(BASIC)
+
+dev:
+	$(BASIC) -DDEV
+
 pgo:
 	$(BASIC) $(PGOGEN)
 	$(BENCH)
 	$(PGOMERGE)
 	$(BASIC) $(PGOUSE)
 	$(CLEAN)
-
-basic:
-	$(BASIC)
-
-dev:
-	$(BASIC) -DDEV
 
 release:
 	$(RELEASE)-nopopcnt.exe

@@ -22,16 +22,15 @@
 
 
 typedef enum MPStage {
-    TTMOVE, GEN, PLAY
+    GEN, PLAY
 } MPStage;
 
 typedef struct MovePicker {
     Thread *thread;
     MoveList list;
     MPStage stage;
-    Move ttMove;
 } MovePicker;
 
 
 Move NextMove(MovePicker *mp);
-void InitNormalMP(MovePicker *mp, Thread *thread, Move ttMove);
+void InitNormalMP(MovePicker *mp, Thread *thread);
